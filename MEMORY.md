@@ -10,6 +10,8 @@ _Reference context — observed facts and standing conventions for this project,
 
 ## Gotchas
 
+- At the 90% pitch-width zoom the view is 61.2 m wide against a 68 m pitch, so only 3.4 m per side stays off-screen and the bounds clamp holds the camera x near 0. Sideways scrolling is effectively absent until the zoom tightens.
+
 - `web/players.png` is 24 × 8 RGBA: three 8 × 8 frames (down, up, right) on a solid magenta `(255, 0, 255)` background, which is meant as the transparency key, not a drawn colour.
 
 ## Decisions

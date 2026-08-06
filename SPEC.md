@@ -8,7 +8,7 @@
 - **Rendering:** Canvas 2D, continuous presentation:
   - World simulated and rendered in floating-point coordinates; no position snapping or logical resolution.
   - Sprites pre-scaled ×4–8 via nearest-neighbor into offscreen canvases at load, then drawn with smoothing enabled at continuous positions, rotations, and scales (crisp chunky pixels, smooth motion).
-  - Camera: smooth scroll tracking the ball with lookahead in direction of play; fixed zoom defined in world units per screen height, resolution-independent.
+  - Camera: smooth scroll tracking the ball with lookahead in direction of play; fixed zoom defined in world units per screen width, resolution-independent. The pitch is vertical, so the width is the axis worth fixing: the view shows 90% of the pitch width at any window shape.
 - **Loop:** Fixed timestep simulation (60 Hz) with interpolated rendering.
 - **No backend, no saves, no audio.**
 
@@ -97,8 +97,9 @@ state you can open in a browser and judge. No step depends on a later one.
   Rendering and raw input handling are checked by eye.
 - **Debug overlay** toggled by a key, showing tick rate, frame rate, ball state,
   and player state. It is a review tool for every step below.
-- **Units.** World units are metres. Pitch is 105 × 68 m. The `+y` axis points
-  down the screen. Ball height is `z`, positive upwards.
+- **Units.** World units are metres. Pitch is 105 × 68 m and vertical: its
+  length runs along the `+y` axis, which points down the screen, so the goals
+  are at the top and the bottom. Ball height is `z`, positive upwards.
 
 ### 9.2 Proposed file layout
 ```
@@ -136,8 +137,9 @@ stall (it must not spiral).
 
 **Step 2 — Pitch and camera**
 Pitch drawn in world units with markings: touchlines, goal lines, halfway line,
-centre circle, penalty areas, goal areas, corner arcs. Camera converts world to
-screen at a fixed zoom given as world-units-per-screen-height, and follows a
+centre circle, penalty areas, goal areas, penalty spots and arcs, corner arcs.
+Camera converts world to screen at a fixed zoom given as
+world-units-per-screen-width, set to 90% of the pitch width, and follows a
 target point with smoothing plus lookahead along the target's velocity.
 *Review:* arrow keys drive a debug target point; the view scrolls smoothly, and
 the pitch fills the same fraction of the screen at any window size.

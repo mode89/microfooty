@@ -1,5 +1,11 @@
 import { startLoop } from './loop.js';
 import { createInput, EMPTY_INPUT } from './input.js';
+import { add, clamp, length, scale } from './math/vec.js';
+import { PITCH_BOUNDS } from './world/pitch.js';
+import { clampCamera, createCamera, createView, followCamera } from './view/camera.js';
+import { renderPitch, renderTarget } from './view/render.js';
+
+const TARGET_SPEED = 14;
 
 const canvas = document.getElementById('screen');
 const context = canvas.getContext('2d');
@@ -27,26 +33,61 @@ const countSecond = (elapsed) => {
   rates.since = 0;
 };
 
-let held = EMPTY_INPUT;
+// Stand-in for the player of step 5: a point driven straight by the keys.
+const moveTarget = (target, held, seconds) => {
+  const direction = {
+    x: (held.right ? 1 : 0) - (held.left ? 1 : 0),
+    y: (held.down ? 1 : 0) - (held.up ? 1 : 0),
+  };
+  const size = length(direction);
+  const velocity = size === 0 ? { x: 0, y: 0 } : scale(direction, TARGET_SPEED / size);
+  const moved = add(target.position, scale(velocity, seconds));
+  return {
+    velocity,
+    position: {
+      x: clamp(moved.x, PITCH_BOUNDS.minX, PITCH_BOUNDS.maxX),
+      y: clamp(moved.y, PITCH_BOUNDS.minY, PITCH_BOUNDS.maxY),
+    },
+  };
+};
 
-const tick = () => {
+const viewOfCamera = (camera) => createView(camera, canvas.clientWidth, canvas.clientHeight);
+
+let held = EMPTY_INPUT;
+let target = { position: { x: 0, y: 0 }, velocity: { x: 0, y: 0 } };
+let previousTarget = target;
+let camera = createCamera();
+let previousCamera = camera;
+
+const tick = (seconds) => {
   held = input.read();
+  previousTarget = target;
+  target = moveTarget(target, held, seconds);
+  previousCamera = camera;
+  camera = clampCamera(followCamera(camera, target, seconds), viewOfCamera(camera));
   rates.ticks += 1;
 };
+
+const between = (from, to, alpha) => ({
+  x: from.x + (to.x - from.x) * alpha,
+  y: from.y + (to.y - from.y) * alpha,
+});
 
 const render = (alpha, frameSeconds) => {
   rates.frames += 1;
   countSecond(frameSeconds);
 
-  const width = canvas.clientWidth;
-  const height = canvas.clientHeight;
-  context.clearRect(0, 0, width, height);
+  const view = viewOfCamera({ centre: between(previousCamera.centre, camera.centre, alpha) });
+  renderPitch(context, view);
+  renderTarget(context, view, between(previousTarget.position, target.position, alpha));
 
   const pressed = Object.keys(held).filter((action) => held[action]);
   const lines = [
     `ticks/s ${rates.ticksPerSecond}`,
     `frames/s ${rates.framesPerSecond}`,
     `alpha ${alpha.toFixed(3)}`,
+    `target ${target.position.x.toFixed(1)} ${target.position.y.toFixed(1)}`,
+    `camera ${camera.centre.x.toFixed(1)} ${camera.centre.y.toFixed(1)}`,
     `held ${pressed.length ? pressed.join(' ') : '-'}`,
   ];
 
