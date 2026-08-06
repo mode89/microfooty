@@ -1,5 +1,5 @@
-import { add, clamp, clampLength, scale, subtract } from '../math/vec.js';
-import { PITCH, PITCH_BOUNDS } from '../world/pitch.js';
+import { add, clamp, clampLength, scale, subtract } from "../math/vec.js";
+import { PITCH, PITCH_BOUNDS } from "../world/pitch.js";
 
 export const VISIBLE_PITCH_WIDTH_FRACTION = 0.9;
 
@@ -22,19 +22,41 @@ export const followCamera = (camera, focus, seconds, settings = CAMERA) => {
   );
   const desired = add(focus.position, lookahead);
   const approach = 1 - Math.exp(-seconds / settings.smoothingSeconds);
-  return { centre: add(camera.centre, scale(subtract(desired, camera.centre), approach)) };
+  return {
+    centre: add(
+      camera.centre,
+      scale(subtract(desired, camera.centre), approach),
+    ),
+  };
 };
 
-export const clampCamera = (camera, view, bounds = PITCH_BOUNDS, margin = CAMERA.boundsMargin) => ({
+export const clampCamera = (
+  camera,
+  view,
+  bounds = PITCH_BOUNDS,
+  margin = CAMERA.boundsMargin,
+) => ({
   centre: {
-    x: clampAxis(camera.centre.x, view.halfWidth, bounds.minX - margin, bounds.maxX + margin),
-    y: clampAxis(camera.centre.y, view.halfHeight, bounds.minY - margin, bounds.maxY + margin),
+    x: clampAxis(
+      camera.centre.x,
+      view.halfWidth,
+      bounds.minX - margin,
+      bounds.maxX + margin,
+    ),
+    y: clampAxis(
+      camera.centre.y,
+      view.halfHeight,
+      bounds.minY - margin,
+      bounds.maxY + margin,
+    ),
   },
 });
 
 // Keeps the visible span inside the limits, or centres it when it does not fit.
 const clampAxis = (centre, halfSpan, min, max) =>
-  halfSpan * 2 >= max - min ? (min + max) / 2 : clamp(centre, min + halfSpan, max - halfSpan);
+  halfSpan * 2 >= max - min
+    ? (min + max) / 2
+    : clamp(centre, min + halfSpan, max - halfSpan);
 
 export const createView = (
   camera,

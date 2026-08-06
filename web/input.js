@@ -1,16 +1,16 @@
 const KEY_BINDINGS = {
-  ArrowUp: 'up',
-  ArrowDown: 'down',
-  ArrowLeft: 'left',
-  ArrowRight: 'right',
-  KeyW: 'up',
-  KeyS: 'down',
-  KeyA: 'left',
-  KeyD: 'right',
-  Space: 'kick',
-  ShiftLeft: 'tackle',
-  ShiftRight: 'tackle',
-  F1: 'debug',
+  ArrowUp: "up",
+  ArrowDown: "down",
+  ArrowLeft: "left",
+  ArrowRight: "right",
+  KeyW: "up",
+  KeyS: "down",
+  KeyA: "left",
+  KeyD: "right",
+  Space: "kick",
+  ShiftLeft: "tackle",
+  ShiftRight: "tackle",
+  F1: "debug",
 };
 
 export const EMPTY_INPUT = Object.freeze({
@@ -36,9 +36,9 @@ export function createInput(target = window) {
     else held.delete(action);
   };
 
-  target.addEventListener('keydown', (event) => set(event, true));
-  target.addEventListener('keyup', (event) => set(event, false));
-  target.addEventListener('blur', () => held.clear());
+  target.addEventListener("keydown", (event) => set(event, true));
+  target.addEventListener("keyup", (event) => set(event, false));
+  target.addEventListener("blur", () => held.clear());
 
   return {
     read: () =>

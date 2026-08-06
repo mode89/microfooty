@@ -8,10 +8,14 @@ Browser-based, single-player, top-down arcade football prototype inspired by Sen
 - `web/` — the game: `index.html` plus ES modules, loaded directly, no build step
 - `test/` — Node built-in test runner specs for the pure modules
 - `scripts/serve` — static server for `web/`
+- `eslint.config.js`, `.prettierrc.json` — lint and format configuration
 
 ## Commands
 
 - Run tests: `node --test`
+- Lint: `npm run lint`
+- Format: `npm run format` (or `npm run format:check` to verify only)
+- Install the dev tools first: `npm install`
 - Play in a browser: `./scripts/serve` (port 8000 by default), then open
   `http://localhost:8000/`
 

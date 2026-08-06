@@ -30,7 +30,7 @@ const box = (depth, width, side) => {
   const goalLine = side * halfLength;
   const inner = goalLine - side * depth;
   return {
-    kind: 'rect',
+    kind: "rect",
     minX: -halfBoxWidth,
     maxX: halfBoxWidth,
     minY: Math.min(goalLine, inner),
@@ -41,7 +41,7 @@ const box = (depth, width, side) => {
 // Each arc is the quarter circle that opens into the pitch, so its start angle
 // follows the corner's quadrant (canvas angles grow clockwise with +y down).
 const cornerArc = (sideX, sideY, quarterTurns) => ({
-  kind: 'arc',
+  kind: "arc",
   x: sideX * halfWidth,
   y: sideY * halfLength,
   radius: PITCH.cornerArcRadius,
@@ -50,7 +50,7 @@ const cornerArc = (sideX, sideY, quarterTurns) => ({
 });
 
 const penaltySpot = (side) => ({
-  kind: 'spot',
+  kind: "spot",
   x: 0,
   y: side * (halfLength - PITCH.penaltySpotDistance),
   radius: PITCH.spotRadius,
@@ -64,7 +64,7 @@ const penaltyArc = (side) => {
   const half = Math.acos(toBoxEdge / PITCH.centreCircleRadius);
   const towardsCentre = side < 0 ? Math.PI / 2 : -Math.PI / 2;
   return {
-    kind: 'arc',
+    kind: "arc",
     x: spot.x,
     y: spot.y,
     radius: PITCH.centreCircleRadius,
@@ -75,10 +75,16 @@ const penaltyArc = (side) => {
 
 // Touchlines and goal lines are the outer rectangle.
 export const PITCH_MARKINGS = Object.freeze([
-  { kind: 'rect', minX: -halfWidth, maxX: halfWidth, minY: -halfLength, maxY: halfLength },
-  { kind: 'line', fromX: -halfWidth, fromY: 0, toX: halfWidth, toY: 0 },
-  { kind: 'circle', x: 0, y: 0, radius: PITCH.centreCircleRadius },
-  { kind: 'spot', x: 0, y: 0, radius: PITCH.spotRadius },
+  {
+    kind: "rect",
+    minX: -halfWidth,
+    maxX: halfWidth,
+    minY: -halfLength,
+    maxY: halfLength,
+  },
+  { kind: "line", fromX: -halfWidth, fromY: 0, toX: halfWidth, toY: 0 },
+  { kind: "circle", x: 0, y: 0, radius: PITCH.centreCircleRadius },
+  { kind: "spot", x: 0, y: 0, radius: PITCH.spotRadius },
   box(PITCH.penaltyAreaDepth, PITCH.penaltyAreaWidth, -1),
   box(PITCH.penaltyAreaDepth, PITCH.penaltyAreaWidth, 1),
   box(PITCH.goalAreaDepth, PITCH.goalAreaWidth, -1),

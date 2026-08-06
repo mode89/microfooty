@@ -32,7 +32,12 @@ export function startLoop({
     const frameSeconds = current - previous;
     previous = current;
 
-    const step = advance(accumulator, frameSeconds, tickSeconds, maxFrameSeconds);
+    const step = advance(
+      accumulator,
+      frameSeconds,
+      tickSeconds,
+      maxFrameSeconds,
+    );
     accumulator = step.accumulator;
     for (let i = 0; i < step.ticks; i += 1) tick(tickSeconds);
     render(step.alpha, frameSeconds);
