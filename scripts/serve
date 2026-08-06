@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# Serves web/ over HTTP, because ES modules do not load from file:// URLs.
+set -euo pipefail
+
+port="${1:-8000}"
+root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/web"
+
+echo "Microfooty on http://localhost:${port}/"
+exec python3 -m http.server "${port}" --directory "${root}" --bind 127.0.0.1
