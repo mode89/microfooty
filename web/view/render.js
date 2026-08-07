@@ -7,6 +7,7 @@ const GRASS_BANDS = ["#1f6b2c", "#237632"];
 const BAND_COUNT = 14;
 const SURROUND = "#123d1a";
 const PAINT = "#eef7ee";
+const SHADOW = "rgba(0, 0, 0, 0.35)";
 
 export const renderPitch = (context, view) => {
   context.fillStyle = SURROUND;
@@ -59,7 +60,36 @@ const drawMarking = (context, view, marking) => {
   else context.stroke();
 };
 
-const SHADOW = "rgba(0, 0, 0, 0.35)";
+// Sprites are squashed vertically, the Sensi trick that reads as a body seen
+// from a camera tilted slightly away from straight down.
+const PLAYER_DRAW = Object.freeze({ width: 1.4, squash: 0.85 });
+
+export const renderPlayer = (context, view, player, sprites) => {
+  const centre = worldToScreen(view, player.position);
+  const width = PLAYER_DRAW.width * view.pixelsPerUnit;
+
+  context.fillStyle = SHADOW;
+  context.beginPath();
+  context.ellipse(
+    centre.x,
+    centre.y + (width * PLAYER_DRAW.squash) / 2,
+    width / 2,
+    (width / 2) * (1 - PLAYER_DRAW.squash) * 2,
+    0,
+    0,
+    Math.PI * 2,
+  );
+  context.fill();
+
+  drawSprite(
+    context,
+    sprites[player.facing],
+    centre,
+    width,
+    width * PLAYER_DRAW.squash,
+  );
+};
+
 const BALL_DRAW_SCALE = 2;
 const SHADOW_FLATTENING = 0.7;
 

@@ -1,24 +1,19 @@
 import { startLoop } from "./loop.js";
 import { createInput, EMPTY_INPUT } from "./input.js";
-import { clamp } from "./math/vec.js";
-import { advanceBall, createBall, launchBall } from "./world/ball.js";
+import { advanceBall, createBall } from "./world/ball.js";
+import {
+  advancePlayer,
+  createPlayer,
+  directionFromInput,
+} from "./world/player.js";
 import {
   clampCamera,
   createCamera,
   createView,
   followCamera,
 } from "./view/camera.js";
-import { renderBall, renderPitch } from "./view/render.js";
-import { createBallSprite } from "./view/sprites.js";
-
-const AIM = {
-  turnRate: 2,
-  elevationRate: 1,
-  maxElevation: 1.3,
-  chargeRate: 30,
-  minPower: 6,
-  maxPower: 36,
-};
+import { renderBall, renderPitch, renderPlayer } from "./view/render.js";
+import { createBallSprite, loadSprites } from "./view/sprites.js";
 
 const canvas = document.getElementById("screen");
 const context = canvas.getContext("2d");
@@ -52,57 +47,34 @@ const countSecond = (elapsed) => {
   rates.since = 0;
 };
 
-// Debug aiming for step 3: left/right turn, up/down raise the launch angle,
-// holding kick charges the power, releasing it launches the ball.
-const aimWithKeys = (aim, keys, seconds) => ({
-  heading:
-    aim.heading +
-    ((keys.right ? 1 : 0) - (keys.left ? 1 : 0)) * AIM.turnRate * seconds,
-  elevation: clamp(
-    aim.elevation +
-      ((keys.down ? -1 : 0) + (keys.up ? 1 : 0)) * AIM.elevationRate * seconds,
-    0,
-    AIM.maxElevation,
-  ),
-  charge: keys.kick
-    ? Math.min(aim.charge + AIM.chargeRate * seconds, AIM.maxPower)
-    : 0,
-});
-
 const viewOfCamera = (camera) =>
   createView(camera, canvas.clientWidth, canvas.clientHeight);
 
 const ballSprite = createBallSprite();
+const playerSprites = await loadSprites("players.png");
 
 let keys = EMPTY_INPUT;
-let aim = { heading: -Math.PI / 2, elevation: 0.6, charge: 0 };
-let ball = createBall();
+let ball = createBall({ x: 0, y: 6 });
 let previousBall = ball;
+let player = createPlayer();
+let previousPlayer = player;
 let camera = createCamera();
 let previousCamera = camera;
 
 const tick = (seconds) => {
-  const previousKeys = keys;
   keys = input.read();
-  const charged = aim.charge;
-  aim = aimWithKeys(aim, keys, seconds);
+
+  previousPlayer = player;
+  player = advancePlayer(player, directionFromInput(keys), seconds);
 
   previousBall = ball;
-  if (keys.tackle) ball = createBall();
-  else if (previousKeys.kick && !keys.kick)
-    ball = launchBall(
-      ball,
-      aim.heading,
-      aim.elevation,
-      Math.max(charged, AIM.minPower),
-    );
   ball = advanceBall(ball, seconds);
 
   previousCamera = camera;
   camera = clampCamera(
     followCamera(
       camera,
-      { position: ball.position, velocity: ball.velocity },
+      { position: player.position, velocity: player.velocity },
       seconds,
     ),
     viewOfCamera(camera),
@@ -130,15 +102,22 @@ const render = (alpha, frameSeconds) => {
     { position: between(previousBall.position, ball.position, alpha) },
     ballSprite,
   );
+  renderPlayer(
+    context,
+    view,
+    {
+      position: between(previousPlayer.position, player.position, alpha),
+      facing: player.facing,
+    },
+    playerSprites,
+  );
 
-  const degrees = (radians) => Math.round((radians * 180) / Math.PI);
   const lines = [
     `ticks/s ${rates.ticksPerSecond}`,
     `frames/s ${rates.framesPerSecond}`,
-    `heading ${degrees(aim.heading)} elevation ${degrees(aim.elevation)}`,
-    `power ${Math.max(aim.charge, 0).toFixed(1)}`,
-    `ball ${ball.position.x.toFixed(1)} ${ball.position.y.toFixed(1)} ${ball.position.z.toFixed(2)}`,
-    `speed ${Math.hypot(ball.velocity.x, ball.velocity.y).toFixed(1)}`,
+    `facing ${player.facing}`,
+    `player ${player.position.x.toFixed(1)} ${player.position.y.toFixed(1)}`,
+    `speed ${Math.hypot(player.velocity.x, player.velocity.y).toFixed(2)}`,
   ];
 
   context.fillStyle = "#e8f5e9";
