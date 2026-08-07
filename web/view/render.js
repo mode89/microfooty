@@ -67,17 +67,24 @@ const drawMarking = (context, view, marking) => {
 
 // Sprites are squashed vertically, the Sensi trick that reads as a body seen
 // from a camera tilted slightly away from straight down.
-const PLAYER_DRAW = Object.freeze({ width: 1.4, squash: 0.85 });
+// The player's position is where the feet stand, and the frame paints them on
+// its seventh row of eight, the last one before its blank bottom row.
+const PLAYER_DRAW = Object.freeze({
+  width: 1.4,
+  squash: 0.85,
+  feetRow: 7 / 8,
+});
 
 export const renderPlayer = (context, view, player, sprites) => {
-  const centre = worldToScreen(view, player.position);
+  const feet = worldToScreen(view, player.position);
   const widthPixels = PLAYER_DRAW.width * view.pixelsPerUnit;
+  const heightPixels = widthPixels * PLAYER_DRAW.squash;
 
   context.fillStyle = SHADOW;
   context.beginPath();
   context.ellipse(
-    centre.x,
-    centre.y + (widthPixels * PLAYER_DRAW.squash) / 2,
+    feet.x,
+    feet.y,
     widthPixels / 2,
     (widthPixels / 2) * (1 - PLAYER_DRAW.squash) * 2,
     0,
@@ -89,9 +96,9 @@ export const renderPlayer = (context, view, player, sprites) => {
   drawSprite(
     context,
     sprites[player.facing],
-    centre,
+    { x: feet.x, y: feet.y - heightPixels * (PLAYER_DRAW.feetRow - 0.5) },
     widthPixels,
-    widthPixels * PLAYER_DRAW.squash,
+    heightPixels,
   );
 };
 

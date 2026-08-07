@@ -52,7 +52,7 @@
   - Facing forward (down), facing backward (up), facing right.
   - Facing left = horizontal mirror of the right-facing sprite.
   - Two lying sprites (slide tackle, keeper dive) = rotations/mirrors of the right-facing sprite; rendered continuously, so they may rotate to arbitrary angles (e.g. slide aligned to movement direction).
-  - 8-directional movement maps to the 4 facings (diagonals use the nearest left/right sprite).
+  - 8-directional movement maps to the 4 facings (upward diagonals use the up sprite, downward diagonals the nearest left/right sprite).
   - Single frame per facing (no run cycle).
   - Kits via palette swap of the same three sprites; derived variants pre-baked into offscreen canvases per kit at load.
 - **Ball sprite: 3×3 px** — white with 3 static black dots (panel pattern). May scale slightly with height (z); a 1–2 px shadow dot on the pitch offsets from the ball as it rises for height readability.
@@ -173,7 +173,8 @@ given size and frame count. (Canvas drawing itself is judged by eye.)
 **Step 5 — Player movement**
 One player. 8-directional input, acceleration towards a target velocity, a
 maximum speed, and friction on release. Facing derives from the movement
-direction and maps to the four sprites; diagonals pick the nearest side sprite.
+direction and maps to the four sprites; upward diagonals pick the up sprite and
+downward diagonals the nearest side sprite.
 Sprites drawn with the slight vertical squash of the Sensi look.
 *Review:* the player runs in all eight directions at a consistent speed, and the
 sprite facing matches the direction without flickering between two facings on

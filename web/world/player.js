@@ -5,7 +5,7 @@ export const PLAYER = Object.freeze({
   maxSpeed: 7,
   acceleration: 28,
   braking: 24,
-  sideBias: 0.15,
+  diagonalBias: 0.15,
   facingHysteresis: 0.05,
 });
 
@@ -51,22 +51,28 @@ export const directionFromInput = (keys) => {
   return size === 0 ? held : scale(held, 1 / size);
 };
 
-// Each facing scores how well it lines up with the direction. The side facings
-// carry a bias, so a 45 degree diagonal always picks left or right, and the
-// current facing carries a smaller one, which leaves a dead band around every
-// boundary. The smaller bias is what stops a wobbling diagonal from flickering
-// while still letting the diagonal rule win.
+// Each facing scores how well it lines up with the direction. The favoured
+// facing of the quadrant carries a bias, so a 45 degree diagonal always picks
+// it, and the current facing carries a smaller one, which leaves a dead band
+// around every boundary. The smaller bias is what stops a wobbling diagonal
+// from flickering while still letting the diagonal rule win.
 export const chooseFacing = (current, direction, settings = PLAYER) => {
   if (length(direction) === 0) return current;
+  const favoured = favouredFacings(direction);
   const score = (facing) =>
     direction.x * FACING_DIRECTIONS[facing].x +
     direction.y * FACING_DIRECTIONS[facing].y +
-    (facing === "left" || facing === "right" ? settings.sideBias : 0) +
+    (favoured.includes(facing) ? settings.diagonalBias : 0) +
     (facing === current ? settings.facingHysteresis : 0);
   return Object.keys(FACING_DIRECTIONS).reduce((best, facing) =>
     score(facing) > score(best) ? facing : best,
   );
 };
+
+// A diagonal that heads up the pitch is drawn with the up frame, which shows
+// the player's back; every other diagonal is drawn with a side frame.
+const favouredFacings = (direction) =>
+  direction.y < 0 ? ["up"] : ["left", "right"];
 
 // Moves the velocity towards the target at a fixed rate without overshooting
 // it. A released direction targets zero, which is the friction that stops the

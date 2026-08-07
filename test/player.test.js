@@ -122,28 +122,35 @@ test("every one of the eight directions picks a facing", () => {
     [keys("down"), "down"],
     [keys("left"), "left"],
     [keys("right"), "right"],
-    [keys("up", "left"), "left"],
-    [keys("up", "right"), "right"],
+    [keys("up", "left"), "up"],
+    [keys("up", "right"), "up"],
     [keys("down", "left"), "left"],
     [keys("down", "right"), "right"],
   ];
   expected.forEach(([held, facing]) =>
     assert.equal(
-      chooseFacing(facing === "up" ? "down" : "up", directionFromInput(held)),
+      chooseFacing(facing === "down" ? "up" : "down", directionFromInput(held)),
       facing,
     ),
   );
 });
 
-test("a diagonal picks the side facing whatever the player faces now", () => {
+test("an upward diagonal picks up whatever the player faces now", () => {
   const upRight = directionFromInput(keys("up", "right"));
   ["up", "down", "left", "right"].forEach((current) =>
-    assert.equal(chooseFacing(current, upRight), "right"),
+    assert.equal(chooseFacing(current, upRight), "up"),
+  );
+});
+
+test("a downward diagonal picks the side facing whatever the player faces now", () => {
+  const downRight = directionFromInput(keys("down", "right"));
+  ["up", "down", "left", "right"].forEach((current) =>
+    assert.equal(chooseFacing(current, downRight), "right"),
   );
 });
 
 test("a direction hovering on a boundary does not flicker", () => {
-  const inside = [50, 51, 52, 53];
+  const inside = [38, 39, 40];
   ["up", "right"].forEach((current) => {
     const facings = inside.map((degrees) =>
       chooseFacing(current, heading(degrees)),
@@ -156,8 +163,8 @@ test("a direction hovering on a boundary does not flicker", () => {
 });
 
 test("a direction well past the boundary changes the facing", () => {
-  assert.equal(chooseFacing("right", heading(60)), "up");
-  assert.equal(chooseFacing("up", heading(40)), "right");
+  assert.equal(chooseFacing("right", heading(50)), "up");
+  assert.equal(chooseFacing("up", heading(30)), "right");
 });
 
 test("no direction keeps the current facing", () => {
