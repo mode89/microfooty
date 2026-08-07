@@ -29,18 +29,18 @@ export function startLoop({
 
   const frame = () => {
     const current = now();
-    const frameSeconds = current - previous;
+    const wallClockSeconds = current - previous;
     previous = current;
 
     const step = advance(
       accumulator,
-      frameSeconds,
+      wallClockSeconds,
       tickSeconds,
       maxFrameSeconds,
     );
     accumulator = step.accumulator;
     for (let i = 0; i < step.ticks; i += 1) tick(tickSeconds);
-    render(step.alpha, frameSeconds);
+    render(step.alpha, wallClockSeconds);
 
     schedule(frame);
   };

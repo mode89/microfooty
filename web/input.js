@@ -13,7 +13,7 @@ const KEY_BINDINGS = {
   F1: "debug",
 };
 
-export const EMPTY_INPUT = Object.freeze({
+const EMPTY_INPUT = Object.freeze({
   up: false,
   down: false,
   left: false,
@@ -23,29 +23,32 @@ export const EMPTY_INPUT = Object.freeze({
   debug: false,
 });
 
-// Tracks which actions are held. `read` returns an immutable snapshot, so the
-// simulation never sees the state change under it mid-tick.
+const ACTIONS = Object.keys(EMPTY_INPUT);
+
 export function createInput(target = window) {
-  const held = new Set();
+  const heldCodes = new Set();
 
   const set = (event, down) => {
-    const action = KEY_BINDINGS[event.code];
-    if (!action) return;
+    if (!KEY_BINDINGS[event.code]) return;
     event.preventDefault();
-    if (down) held.add(action);
-    else held.delete(action);
+    if (down) heldCodes.add(event.code);
+    else heldCodes.delete(event.code);
   };
 
   target.addEventListener("keydown", (event) => set(event, true));
   target.addEventListener("keyup", (event) => set(event, false));
-  target.addEventListener("blur", () => held.clear());
+  target.addEventListener("blur", () => heldCodes.clear());
 
   return {
-    read: () =>
-      Object.freeze(
+    read: () => {
+      const heldActions = new Set(
+        [...heldCodes].map((code) => KEY_BINDINGS[code]),
+      );
+      return Object.freeze(
         Object.fromEntries(
-          Object.keys(EMPTY_INPUT).map((action) => [action, held.has(action)]),
+          ACTIONS.map((action) => [action, heldActions.has(action)]),
         ),
-      ),
+      );
+    },
   };
 }

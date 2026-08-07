@@ -1,5 +1,5 @@
 import { startLoop } from "./loop.js";
-import { createInput, EMPTY_INPUT } from "./input.js";
+import { createInput } from "./input.js";
 import { advanceBall, createBall } from "./world/ball.js";
 import {
   advancePlayer,
@@ -12,6 +12,7 @@ import {
   createView,
   followCamera,
 } from "./view/camera.js";
+import { createDebugOverlay } from "./view/debug.js";
 import { renderBall, renderPitch, renderPlayer } from "./view/render.js";
 import { createBallSprite, loadSprites } from "./view/sprites.js";
 
@@ -29,43 +30,29 @@ const fitToWindow = () => {
 window.addEventListener("resize", fitToWindow);
 fitToWindow();
 
-const rates = {
-  ticks: 0,
-  frames: 0,
-  ticksPerSecond: 0,
-  framesPerSecond: 0,
-  since: 0,
-};
-
-const countSecond = (elapsed) => {
-  rates.since += elapsed;
-  if (rates.since < 1) return;
-  rates.ticksPerSecond = Math.round(rates.ticks / rates.since);
-  rates.framesPerSecond = Math.round(rates.frames / rates.since);
-  rates.ticks = 0;
-  rates.frames = 0;
-  rates.since = 0;
-};
-
 const viewOfCamera = (camera) =>
   createView(camera, canvas.clientWidth, canvas.clientHeight);
 
 const ballSprite = createBallSprite();
 const playerSprites = await loadSprites("players.png");
+const debug = createDebugOverlay();
 
-let keys = EMPTY_INPUT;
 let ball = createBall({ x: 0, y: 6 });
 let previousBall = ball;
 let player = createPlayer();
 let previousPlayer = player;
 let camera = createCamera();
 let previousCamera = camera;
+let debugVisible = false;
+let debugWasHeld = false;
 
 const tick = (seconds) => {
-  keys = input.read();
+  const actions = input.read();
+  if (actions.debug && !debugWasHeld) debugVisible = !debugVisible;
+  debugWasHeld = actions.debug;
 
   previousPlayer = player;
-  player = advancePlayer(player, directionFromInput(keys), seconds);
+  player = advancePlayer(player, directionFromInput(actions), seconds);
 
   previousBall = ball;
   ball = advanceBall(ball, seconds);
@@ -79,51 +66,45 @@ const tick = (seconds) => {
     ),
     viewOfCamera(camera),
   );
-  rates.ticks += 1;
+  debug.recordTick();
 };
 
-const between = (from, to, alpha) => ({
+const interpolate2D = (from, to, alpha) => ({
   x: from.x + (to.x - from.x) * alpha,
   y: from.y + (to.y - from.y) * alpha,
-  z: from.z + ((to.z ?? 0) - (from.z ?? 0)) * alpha,
 });
 
-const render = (alpha, frameSeconds) => {
-  rates.frames += 1;
-  countSecond(frameSeconds);
+const interpolate3D = (from, to, alpha) => ({
+  ...interpolate2D(from, to, alpha),
+  z: from.z + (to.z - from.z) * alpha,
+});
+
+const render = (alpha, wallClockSeconds) => {
+  debug.recordFrame(wallClockSeconds);
 
   const view = viewOfCamera({
-    centre: between(previousCamera.centre, camera.centre, alpha),
+    centre: interpolate2D(previousCamera.centre, camera.centre, alpha),
   });
   renderPitch(context, view);
   renderBall(
     context,
     view,
-    { position: between(previousBall.position, ball.position, alpha) },
+    {
+      position: interpolate3D(previousBall.position, ball.position, alpha),
+    },
     ballSprite,
   );
   renderPlayer(
     context,
     view,
     {
-      position: between(previousPlayer.position, player.position, alpha),
+      position: interpolate2D(previousPlayer.position, player.position, alpha),
       facing: player.facing,
     },
     playerSprites,
   );
 
-  const lines = [
-    `ticks/s ${rates.ticksPerSecond}`,
-    `frames/s ${rates.framesPerSecond}`,
-    `facing ${player.facing}`,
-    `player ${player.position.x.toFixed(1)} ${player.position.y.toFixed(1)}`,
-    `speed ${Math.hypot(player.velocity.x, player.velocity.y).toFixed(2)}`,
-  ];
-
-  context.fillStyle = "#e8f5e9";
-  context.font = "16px monospace";
-  context.textBaseline = "top";
-  lines.forEach((line, index) => context.fillText(line, 16, 16 + index * 20));
+  if (debugVisible) debug.draw(context, { ball, player });
 };
 
 startLoop({ tick, render });

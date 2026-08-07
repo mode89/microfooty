@@ -90,3 +90,27 @@ test("the loop ticks the simulation and renders once per frame", () => {
   assert.equal(renders.length, 2);
   closeTo(renders[1], 0.5);
 });
+
+test("render receives raw wall-clock time when simulation time is clamped", () => {
+  const frames = [];
+  let clock = 0;
+  let ticks = 0;
+  let renderedSeconds;
+
+  startLoop({
+    tick: () => {
+      ticks += 1;
+    },
+    render: (_alpha, wallClockSeconds) => {
+      renderedSeconds = wallClockSeconds;
+    },
+    now: () => clock,
+    schedule: (frame) => frames.push(frame),
+  });
+
+  clock = 10;
+  frames.pop()();
+
+  assert.equal(ticks, Math.floor(MAX_FRAME_SECONDS / TICK_SECONDS));
+  assert.equal(renderedSeconds, 10);
+});
