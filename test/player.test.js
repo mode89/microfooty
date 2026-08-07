@@ -69,6 +69,53 @@ test("the player stays inside the pitch", () => {
   assert.ok(player.position.y <= 52.5);
 });
 
+test("a boundary removes only the outward velocity", () => {
+  const player = {
+    position: { x: 1, y: 0 },
+    velocity: { x: PLAYER.maxSpeed, y: 3 },
+    facing: "right",
+  };
+  const direction = directionFromInput(keys("right"));
+  const bounds = { minX: -1, maxX: 1, minY: -10, maxY: 10 };
+  const unbounded = advancePlayer(player, direction, TICK, PLAYER, {
+    minX: -10,
+    maxX: 10,
+    minY: -10,
+    maxY: 10,
+  });
+  const bounded = advancePlayer(player, direction, TICK, PLAYER, bounds);
+  assert.equal(bounded.position.x, bounds.maxX);
+  assert.equal(bounded.velocity.x, 0);
+  assert.equal(bounded.position.y, unbounded.position.y);
+  assert.equal(bounded.velocity.y, unbounded.velocity.y);
+});
+
+test("a player at the boundary can reverse inward immediately", () => {
+  const bounds = { minX: -1, maxX: 1, minY: -1, maxY: 1 };
+  const outward = {
+    position: { x: bounds.maxX, y: 0 },
+    velocity: { x: PLAYER.maxSpeed, y: 0 },
+    facing: "right",
+  };
+  const blocked = advancePlayer(
+    outward,
+    directionFromInput(keys("right")),
+    TICK,
+    PLAYER,
+    bounds,
+  );
+  const reversed = advancePlayer(
+    blocked,
+    directionFromInput(keys("left")),
+    TICK,
+    PLAYER,
+    bounds,
+  );
+  assert.equal(blocked.velocity.x, 0);
+  assert.ok(reversed.position.x < bounds.maxX);
+  assert.ok(reversed.velocity.x < 0);
+});
+
 test("every one of the eight directions picks a facing", () => {
   const expected = [
     [keys("up"), "up"],

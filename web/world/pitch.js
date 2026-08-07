@@ -25,6 +25,11 @@ export const PITCH_BOUNDS = Object.freeze({
   maxY: halfLength,
 });
 
+const LEFT_SIDE = -1;
+const RIGHT_SIDE = 1;
+const TOP_END = -1;
+const BOTTOM_END = 1;
+
 const box = (depth, width, side) => {
   const halfBoxWidth = width / 2;
   const goalLine = side * halfLength;
@@ -85,16 +90,16 @@ export const PITCH_MARKINGS = Object.freeze([
   { kind: "line", fromX: -halfWidth, fromY: 0, toX: halfWidth, toY: 0 },
   { kind: "circle", x: 0, y: 0, radius: PITCH.centreCircleRadius },
   { kind: "spot", x: 0, y: 0, radius: PITCH.spotRadius },
-  box(PITCH.penaltyAreaDepth, PITCH.penaltyAreaWidth, -1),
-  box(PITCH.penaltyAreaDepth, PITCH.penaltyAreaWidth, 1),
-  box(PITCH.goalAreaDepth, PITCH.goalAreaWidth, -1),
-  box(PITCH.goalAreaDepth, PITCH.goalAreaWidth, 1),
-  penaltySpot(-1),
-  penaltySpot(1),
-  penaltyArc(-1),
-  penaltyArc(1),
-  cornerArc(-1, -1, 0),
-  cornerArc(1, -1, 1),
-  cornerArc(1, 1, 2),
-  cornerArc(-1, 1, 3),
+  box(PITCH.penaltyAreaDepth, PITCH.penaltyAreaWidth, TOP_END),
+  box(PITCH.penaltyAreaDepth, PITCH.penaltyAreaWidth, BOTTOM_END),
+  box(PITCH.goalAreaDepth, PITCH.goalAreaWidth, TOP_END),
+  box(PITCH.goalAreaDepth, PITCH.goalAreaWidth, BOTTOM_END),
+  penaltySpot(TOP_END),
+  penaltySpot(BOTTOM_END),
+  penaltyArc(TOP_END),
+  penaltyArc(BOTTOM_END),
+  cornerArc(LEFT_SIDE, TOP_END, 0),
+  cornerArc(RIGHT_SIDE, TOP_END, 1),
+  cornerArc(RIGHT_SIDE, BOTTOM_END, 2),
+  cornerArc(LEFT_SIDE, BOTTOM_END, 3),
 ]);

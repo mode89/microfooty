@@ -4,11 +4,11 @@ export const BALL = Object.freeze({
   radius: 0.11,
   gravity: 9.81,
   airDrag: 0.12,
-  rollFriction: 3.2,
+  rollingDeceleration: 3.2,
   restitution: 0.55,
-  bounceGrip: 0.8,
-  restSpeed: 0.08,
-  restBounceSpeed: 0.7,
+  bounceHorizontalRetention: 0.8,
+  rollingStopSpeed: 0.08,
+  minimumBounceImpactSpeed: 0.7,
 });
 
 export const createBall = (position = { x: 0, y: 0 }, settings = BALL) => ({
@@ -26,31 +26,92 @@ export const launchBall = (ball, heading, elevation, power) => ({
 });
 
 export const advanceBall = (ball, seconds, settings = BALL) => {
-  const horizontal = isGrounded(ball, settings)
-    ? roll(ball, seconds, settings)
-    : glide(ball, seconds, settings);
-  const vertical = fall(ball, seconds, settings);
-  return land(
-    {
-      position: { ...horizontal.position, z: vertical.position },
-      velocity: { ...horizontal.velocity, z: vertical.velocity },
-    },
-    settings,
-  );
+  let current = ball;
+  let remaining = seconds;
+
+  while (remaining > 0) {
+    if (isGrounded(current, settings))
+      return combineMotion(roll(current, remaining, settings), {
+        height: settings.radius,
+        speed: 0,
+      });
+
+    const landingSeconds = secondsUntilGround(current, settings);
+    if (landingSeconds > remaining)
+      return moveThroughAir(current, remaining, settings);
+
+    const impact = moveThroughAir(current, landingSeconds, settings);
+    current = resolveImpact(impact, settings);
+    remaining = Math.max(0, remaining - landingSeconds);
+  }
+
+  return current;
 };
 
 const isGrounded = (ball, settings) =>
   ball.position.z <= settings.radius + EPSILON &&
   Math.abs(ball.velocity.z) <= EPSILON;
 
-// Constant deceleration, with a floor below which the ball is put at rest so a
-// rolling ball cannot creep forever at a vanishing speed.
+const moveThroughAir = (ball, seconds, settings) =>
+  combineMotion(glide(ball, seconds, settings), fall(ball, seconds, settings));
+
+const secondsUntilGround = (ball, settings) => {
+  const height = Math.max(0, ball.position.z - settings.radius);
+  if (height === 0)
+    return ball.velocity.z > 0 ? (2 * ball.velocity.z) / settings.gravity : 0;
+
+  const root = Math.sqrt(
+    ball.velocity.z * ball.velocity.z + 2 * settings.gravity * height,
+  );
+  return ball.velocity.z >= 0
+    ? (ball.velocity.z + root) / settings.gravity
+    : (2 * height) / (root - ball.velocity.z);
+};
+
+const resolveImpact = (ball, settings) => {
+  const impactSpeed = -ball.velocity.z;
+  const bouncing = impactSpeed >= settings.minimumBounceImpactSpeed;
+  const horizontalRetention = bouncing ? settings.bounceHorizontalRetention : 1;
+  return combineMotion(
+    {
+      position: { x: ball.position.x, y: ball.position.y },
+      velocity: {
+        x: ball.velocity.x * horizontalRetention,
+        y: ball.velocity.y * horizontalRetention,
+      },
+    },
+    {
+      height: settings.radius,
+      speed: bouncing ? impactSpeed * settings.restitution : 0,
+    },
+  );
+};
+
+// Constant deceleration ends at a defined speed transition, so rolling stops
+// at the same position whether the duration is advanced at once or in parts.
 const roll = (ball, seconds, settings) => {
   const speed = Math.hypot(ball.velocity.x, ball.velocity.y);
-  if (speed === 0) return { position: ball.position, velocity: ball.velocity };
-  const slowed = Math.max(0, speed - settings.rollFriction * seconds);
-  const travel = ((speed + slowed) / 2) * seconds;
-  const kept = slowed < settings.restSpeed ? 0 : slowed / speed;
+  if (speed <= settings.rollingStopSpeed)
+    return {
+      position: { x: ball.position.x, y: ball.position.y },
+      velocity: { x: 0, y: 0 },
+    };
+
+  if (settings.rollingDeceleration === 0)
+    return {
+      position: {
+        x: ball.position.x + ball.velocity.x * seconds,
+        y: ball.position.y + ball.velocity.y * seconds,
+      },
+      velocity: { x: ball.velocity.x, y: ball.velocity.y },
+    };
+
+  const secondsToStop =
+    (speed - settings.rollingStopSpeed) / settings.rollingDeceleration;
+  const travelSeconds = Math.min(seconds, secondsToStop);
+  const slowed = speed - settings.rollingDeceleration * travelSeconds;
+  const travel = ((speed + slowed) / 2) * travelSeconds;
+  const kept = seconds >= secondsToStop ? 0 : slowed / speed;
   return {
     position: {
       x: ball.position.x + (ball.velocity.x / speed) * travel,
@@ -60,11 +121,20 @@ const roll = (ball, seconds, settings) => {
   };
 };
 
-// Exponential air drag on the horizontal velocity, integrated exactly, so the
-// path does not change when the same time span is split into more ticks.
+// Exponential air drag is integrated exactly. expm1 preserves travel distance
+// when drag is too small for subtracting the exponential from one accurately.
 const glide = (ball, seconds, settings) => {
+  if (settings.airDrag === 0)
+    return {
+      position: {
+        x: ball.position.x + ball.velocity.x * seconds,
+        y: ball.position.y + ball.velocity.y * seconds,
+      },
+      velocity: { x: ball.velocity.x, y: ball.velocity.y },
+    };
+
   const kept = Math.exp(-settings.airDrag * seconds);
-  const travel = (1 - kept) / settings.airDrag;
+  const travel = -Math.expm1(-settings.airDrag * seconds) / settings.airDrag;
   return {
     position: {
       x: ball.position.x + ball.velocity.x * travel,
@@ -75,24 +145,14 @@ const glide = (ball, seconds, settings) => {
 };
 
 const fall = (ball, seconds, settings) => ({
-  position:
+  height:
     ball.position.z +
     ball.velocity.z * seconds -
     0.5 * settings.gravity * seconds * seconds,
-  velocity: ball.velocity.z - settings.gravity * seconds,
+  speed: ball.velocity.z - settings.gravity * seconds,
 });
 
-const land = (ball, settings) => {
-  if (ball.position.z >= settings.radius) return ball;
-  const impact = -ball.velocity.z;
-  const resting = impact < settings.restBounceSpeed;
-  const grip = resting ? 1 : settings.bounceGrip;
-  return {
-    position: { ...ball.position, z: settings.radius },
-    velocity: {
-      x: ball.velocity.x * grip,
-      y: ball.velocity.y * grip,
-      z: resting ? 0 : impact * settings.restitution,
-    },
-  };
-};
+const combineMotion = (horizontal, vertical) => ({
+  position: { ...horizontal.position, z: vertical.height },
+  velocity: { ...horizontal.velocity, z: vertical.speed },
+});

@@ -9,7 +9,7 @@ export const PLAYER = Object.freeze({
   facingHysteresis: 0.05,
 });
 
-export const FACING_DIRECTIONS = Object.freeze({
+const FACING_DIRECTIONS = Object.freeze({
   up: { x: 0, y: -1 },
   down: { x: 0, y: 1 },
   left: { x: -1, y: 0 },
@@ -31,12 +31,11 @@ export const advancePlayer = (
 ) => {
   const velocity = steer(player.velocity, direction, seconds, settings);
   const moved = add(player.position, scale(velocity, seconds));
+  const x = resolveAxis(moved.x, velocity.x, bounds.minX, bounds.maxX);
+  const y = resolveAxis(moved.y, velocity.y, bounds.minY, bounds.maxY);
   return {
-    position: {
-      x: clamp(moved.x, bounds.minX, bounds.maxX),
-      y: clamp(moved.y, bounds.minY, bounds.maxY),
-    },
-    velocity,
+    position: { x: x.position, y: y.position },
+    velocity: { x: x.velocity, y: y.velocity },
     facing: chooseFacing(player.facing, direction, settings),
   };
 };
@@ -81,4 +80,14 @@ const steer = (velocity, direction, seconds, settings) => {
   return size <= step
     ? add(velocity, change)
     : add(velocity, scale(change, step / size));
+};
+
+const resolveAxis = (position, velocity, minimum, maximum) => {
+  const blockedOutward =
+    (position < minimum && velocity < 0) ||
+    (position > maximum && velocity > 0);
+  return {
+    position: clamp(position, minimum, maximum),
+    velocity: blockedOutward ? 0 : velocity,
+  };
 };
