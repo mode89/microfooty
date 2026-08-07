@@ -9,6 +9,7 @@ import {
   followCamera,
 } from "./view/camera.js";
 import { renderBall, renderPitch } from "./view/render.js";
+import { createBallSprite } from "./view/sprites.js";
 
 const AIM = {
   turnRate: 2,
@@ -71,6 +72,8 @@ const aimWithKeys = (aim, keys, seconds) => ({
 const viewOfCamera = (camera) =>
   createView(camera, canvas.clientWidth, canvas.clientHeight);
 
+const ballSprite = createBallSprite();
+
 let keys = EMPTY_INPUT;
 let aim = { heading: -Math.PI / 2, elevation: 0.6, charge: 0 };
 let ball = createBall();
@@ -121,9 +124,12 @@ const render = (alpha, frameSeconds) => {
     centre: between(previousCamera.centre, camera.centre, alpha),
   });
   renderPitch(context, view);
-  renderBall(context, view, {
-    position: between(previousBall.position, ball.position, alpha),
-  });
+  renderBall(
+    context,
+    view,
+    { position: between(previousBall.position, ball.position, alpha) },
+    ballSprite,
+  );
 
   const degrees = (radians) => Math.round((radians * 180) / Math.PI);
   const lines = [

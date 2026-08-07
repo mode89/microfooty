@@ -160,7 +160,7 @@ restitution factor; a rolling ball stops in finite time and does not creep; the
 trajectory is unchanged when the same time span is split into more ticks.
 
 **Step 4 — Sprite pipeline**
-Load `players.png` (24 × 8, three 8 × 8 frames: down, up, right). At load,
+Load `players.png` (24 × 8, three 8 × 8 frames: down, right, up). At load,
 draw each frame into its own offscreen canvas scaled ×8 with nearest-neighbour,
 plus a pre-mirrored left frame. Per-frame drawing then uses smoothing at
 fractional positions. The 3 × 3 ball sprite is generated in code, not loaded.

@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Microfooty — sprite demo</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        overflow: hidden;
+      }
+      canvas {
+        display: block;
+        width: 100%;
+        height: 100%;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="screen"></canvas>
+    <script type="module">
+      import { startLoop } from "./loop.js";
+      import {
+        createBallSprite,
+        drawSprite,
+        loadSprites,
+        SHEET_FACINGS,
+      } from "./view/sprites.js";
+
+      const FACINGS = [...SHEET_FACINGS, "left"];
+      const SPRITE_SIZE = 96;
+      const DRIFT_SPEED = 40;
+      const BACKGROUND = "#1f6b2c";
+      const LABEL = "#e8f5e9";
+
+      const canvas = document.getElementById("screen");
+      const context = canvas.getContext("2d");
+
+      const fitToWindow = () => {
+        const ratio = window.devicePixelRatio || 1;
+        canvas.width = Math.round(canvas.clientWidth * ratio);
+        canvas.height = Math.round(canvas.clientHeight * ratio);
+        context.setTransform(ratio, 0, 0, ratio, 0, 0);
+      };
+
+      window.addEventListener("resize", fitToWindow);
+      fitToWindow();
+
+      const sprites = await loadSprites("./players.png");
+      const ballSprite = createBallSprite();
+
+      let drift = 0;
+
+      const tick = (seconds) => {
+        drift =
+          (drift + DRIFT_SPEED * seconds) % (canvas.clientWidth + SPRITE_SIZE);
+      };
+
+      const render = () => {
+        const width = canvas.clientWidth;
+        const height = canvas.clientHeight;
+        context.fillStyle = BACKGROUND;
+        context.fillRect(0, 0, width, height);
+
+        context.fillStyle = LABEL;
+        context.font = "16px monospace";
+        context.textAlign = "center";
+        context.textBaseline = "top";
+        FACINGS.forEach((facing, index) => {
+          const x = (width * (index + 1)) / (FACINGS.length + 1);
+          drawSprite(context, sprites[facing], { x, y: height / 3 }, 96, 96);
+          context.fillText(facing, x, height / 3 + SPRITE_SIZE);
+        });
+
+        // Fractional coordinates on purpose: this is where wobble or stepping
+        // shows.
+        drawSprite(
+          context,
+          sprites.right,
+          { x: drift - SPRITE_SIZE / 2, y: (height * 2) / 3 },
+          SPRITE_SIZE,
+          SPRITE_SIZE,
+        );
+        drawSprite(
+          context,
+          ballSprite,
+          { x: drift - SPRITE_SIZE / 2, y: (height * 2) / 3 + SPRITE_SIZE },
+          36,
+          36,
+        );
+      };
+
+      startLoop({ tick, render });
+    </script>
+  </body>
+</html>
