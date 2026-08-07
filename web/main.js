@@ -1,16 +1,23 @@
 import { startLoop } from "./loop.js";
 import { createInput, EMPTY_INPUT } from "./input.js";
-import { add, clamp, length, scale } from "./math/vec.js";
-import { PITCH_BOUNDS } from "./world/pitch.js";
+import { clamp } from "./math/vec.js";
+import { advanceBall, createBall, launchBall } from "./world/ball.js";
 import {
   clampCamera,
   createCamera,
   createView,
   followCamera,
 } from "./view/camera.js";
-import { renderPitch, renderTarget } from "./view/render.js";
+import { renderBall, renderPitch } from "./view/render.js";
 
-const TARGET_SPEED = 14;
+const AIM = {
+  turnRate: 2,
+  elevationRate: 1,
+  maxElevation: 1.3,
+  chargeRate: 30,
+  minPower: 6,
+  maxPower: 36,
+};
 
 const canvas = document.getElementById("screen");
 const context = canvas.getContext("2d");
@@ -44,41 +51,57 @@ const countSecond = (elapsed) => {
   rates.since = 0;
 };
 
-// Stand-in for the player of step 5: a point driven straight by the keys.
-const moveTarget = (target, held, seconds) => {
-  const direction = {
-    x: (held.right ? 1 : 0) - (held.left ? 1 : 0),
-    y: (held.down ? 1 : 0) - (held.up ? 1 : 0),
-  };
-  const size = length(direction);
-  const velocity =
-    size === 0 ? { x: 0, y: 0 } : scale(direction, TARGET_SPEED / size);
-  const moved = add(target.position, scale(velocity, seconds));
-  return {
-    velocity,
-    position: {
-      x: clamp(moved.x, PITCH_BOUNDS.minX, PITCH_BOUNDS.maxX),
-      y: clamp(moved.y, PITCH_BOUNDS.minY, PITCH_BOUNDS.maxY),
-    },
-  };
-};
+// Debug aiming for step 3: left/right turn, up/down raise the launch angle,
+// holding kick charges the power, releasing it launches the ball.
+const aimWithKeys = (aim, keys, seconds) => ({
+  heading:
+    aim.heading +
+    ((keys.right ? 1 : 0) - (keys.left ? 1 : 0)) * AIM.turnRate * seconds,
+  elevation: clamp(
+    aim.elevation +
+      ((keys.down ? -1 : 0) + (keys.up ? 1 : 0)) * AIM.elevationRate * seconds,
+    0,
+    AIM.maxElevation,
+  ),
+  charge: keys.kick
+    ? Math.min(aim.charge + AIM.chargeRate * seconds, AIM.maxPower)
+    : 0,
+});
 
 const viewOfCamera = (camera) =>
   createView(camera, canvas.clientWidth, canvas.clientHeight);
 
-let held = EMPTY_INPUT;
-let target = { position: { x: 0, y: 0 }, velocity: { x: 0, y: 0 } };
-let previousTarget = target;
+let keys = EMPTY_INPUT;
+let aim = { heading: -Math.PI / 2, elevation: 0.6, charge: 0 };
+let ball = createBall();
+let previousBall = ball;
 let camera = createCamera();
 let previousCamera = camera;
 
 const tick = (seconds) => {
-  held = input.read();
-  previousTarget = target;
-  target = moveTarget(target, held, seconds);
+  const previousKeys = keys;
+  keys = input.read();
+  const charged = aim.charge;
+  aim = aimWithKeys(aim, keys, seconds);
+
+  previousBall = ball;
+  if (keys.tackle) ball = createBall();
+  else if (previousKeys.kick && !keys.kick)
+    ball = launchBall(
+      ball,
+      aim.heading,
+      aim.elevation,
+      Math.max(charged, AIM.minPower),
+    );
+  ball = advanceBall(ball, seconds);
+
   previousCamera = camera;
   camera = clampCamera(
-    followCamera(camera, target, seconds),
+    followCamera(
+      camera,
+      { position: ball.position, velocity: ball.velocity },
+      seconds,
+    ),
     viewOfCamera(camera),
   );
   rates.ticks += 1;
@@ -87,6 +110,7 @@ const tick = (seconds) => {
 const between = (from, to, alpha) => ({
   x: from.x + (to.x - from.x) * alpha,
   y: from.y + (to.y - from.y) * alpha,
+  z: from.z + ((to.z ?? 0) - (from.z ?? 0)) * alpha,
 });
 
 const render = (alpha, frameSeconds) => {
@@ -97,20 +121,18 @@ const render = (alpha, frameSeconds) => {
     centre: between(previousCamera.centre, camera.centre, alpha),
   });
   renderPitch(context, view);
-  renderTarget(
-    context,
-    view,
-    between(previousTarget.position, target.position, alpha),
-  );
+  renderBall(context, view, {
+    position: between(previousBall.position, ball.position, alpha),
+  });
 
-  const pressed = Object.keys(held).filter((action) => held[action]);
+  const degrees = (radians) => Math.round((radians * 180) / Math.PI);
   const lines = [
     `ticks/s ${rates.ticksPerSecond}`,
     `frames/s ${rates.framesPerSecond}`,
-    `alpha ${alpha.toFixed(3)}`,
-    `target ${target.position.x.toFixed(1)} ${target.position.y.toFixed(1)}`,
-    `camera ${camera.centre.x.toFixed(1)} ${camera.centre.y.toFixed(1)}`,
-    `held ${pressed.length ? pressed.join(" ") : "-"}`,
+    `heading ${degrees(aim.heading)} elevation ${degrees(aim.elevation)}`,
+    `power ${Math.max(aim.charge, 0).toFixed(1)}`,
+    `ball ${ball.position.x.toFixed(1)} ${ball.position.y.toFixed(1)} ${ball.position.z.toFixed(2)}`,
+    `speed ${Math.hypot(ball.velocity.x, ball.velocity.y).toFixed(1)}`,
   ];
 
   context.fillStyle = "#e8f5e9";

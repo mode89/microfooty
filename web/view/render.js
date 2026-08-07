@@ -1,5 +1,6 @@
 import { worldToScreen } from "./camera.js";
 import { PITCH, PITCH_MARKINGS } from "../world/pitch.js";
+import { BALL } from "../world/ball.js";
 
 const GRASS_BANDS = ["#1f6b2c", "#237632"];
 const BAND_COUNT = 14;
@@ -57,10 +58,33 @@ const drawMarking = (context, view, marking) => {
   else context.stroke();
 };
 
-export const renderTarget = (context, view, position) => {
-  const screen = worldToScreen(view, position);
-  context.fillStyle = "#ffd54f";
+const SHADOW = "rgba(0, 0, 0, 0.35)";
+const BALL_COLOUR = "#fdfdfd";
+const BALL_DRAW_SCALE = 2;
+const SHADOW_FLATTENING = 0.7;
+
+// Height only moves the ball up the screen; its shadow stays on the ground, so
+// the gap between the two reads as z while both keep a fixed size.
+export const renderBall = (context, view, ball) => {
+  const ground = worldToScreen(view, ball.position);
+  const height = ball.position.z * view.pixelsPerUnit;
+  const radius = BALL.radius * BALL_DRAW_SCALE * view.pixelsPerUnit;
+
+  context.fillStyle = SHADOW;
   context.beginPath();
-  context.arc(screen.x, screen.y, 0.5 * view.pixelsPerUnit, 0, Math.PI * 2);
+  context.ellipse(
+    ground.x,
+    ground.y,
+    radius,
+    radius * SHADOW_FLATTENING,
+    0,
+    0,
+    Math.PI * 2,
+  );
+  context.fill();
+
+  context.fillStyle = BALL_COLOUR;
+  context.beginPath();
+  context.arc(ground.x, ground.y - height, radius, 0, Math.PI * 2);
   context.fill();
 };
