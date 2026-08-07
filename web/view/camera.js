@@ -39,13 +39,13 @@ export const clampCamera = (
   centre: {
     x: clampAxis(
       camera.centre.x,
-      view.halfWidth,
+      view.worldHalfWidth,
       bounds.minX - margin,
       bounds.maxX + margin,
     ),
     y: clampAxis(
       camera.centre.y,
-      view.halfHeight,
+      view.worldHalfHeight,
       bounds.minY - margin,
       bounds.maxY + margin,
     ),
@@ -70,8 +70,8 @@ export const createView = (
     pixelsPerUnit,
     screenWidth,
     screenHeight,
-    halfWidth: worldUnitsPerScreenWidth / 2,
-    halfHeight: screenHeight / 2 / pixelsPerUnit,
+    worldHalfWidth: worldUnitsPerScreenWidth / 2,
+    worldHalfHeight: screenHeight / 2 / pixelsPerUnit,
   };
 };
 

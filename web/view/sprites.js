@@ -1,6 +1,8 @@
 export const SPRITE_SCALE = 8;
 export const SHEET_FACINGS = Object.freeze(["down", "right", "up"]);
 
+const PLAYER_FRAME_SIZE = 8;
+
 // The sheet paints its background in this colour instead of carrying an alpha
 // channel, so it is removed when the frames are cut.
 const COLOUR_KEY = Object.freeze({ red: 255, green: 0, blue: 255 });
@@ -11,8 +13,9 @@ const BALL_COLOURS = Object.freeze({ ".": "#fdfdfd", "#": "#1a1a1a" });
 // Cuts the sheet into frames and pre-scales each one with nearest-neighbour, so
 // per-frame drawing can keep smoothing on at fractional positions and still
 // show chunky pixels. The left facing is the mirror of the right one.
-export const loadSprites = async (url, scale = SPRITE_SCALE) => {
+export const loadPlayerSprites = async (url, scale = SPRITE_SCALE) => {
   const image = await loadImage(url);
+  validatePlayerSheet(image.width, image.height);
   const frames = sliceFrames(image.width, image.height, SHEET_FACINGS.length);
   const sprites = Object.fromEntries(
     SHEET_FACINGS.map((facing, index) => [
@@ -43,6 +46,14 @@ export const drawSprite = (context, sprite, centre, width, height) =>
     width,
     height,
   );
+
+export const validatePlayerSheet = (sheetWidth, sheetHeight) => {
+  const expectedWidth = PLAYER_FRAME_SIZE * SHEET_FACINGS.length;
+  if (sheetWidth !== expectedWidth || sheetHeight !== PLAYER_FRAME_SIZE)
+    throw new Error(
+      `player sheet must be ${expectedWidth} x ${PLAYER_FRAME_SIZE} px (three square 8 x 8 frames), got ${sheetWidth} x ${sheetHeight} px`,
+    );
+};
 
 export const sliceFrames = (sheetWidth, sheetHeight, frameCount) => {
   const width = sheetWidth / frameCount;

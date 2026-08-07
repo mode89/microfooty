@@ -14,7 +14,7 @@ import {
 } from "./view/camera.js";
 import { createDebugOverlay } from "./view/debug.js";
 import { renderBall, renderPitch, renderPlayer } from "./view/render.js";
-import { createBallSprite, loadSprites } from "./view/sprites.js";
+import { createBallSprite, loadPlayerSprites } from "./view/sprites.js";
 
 const canvas = document.getElementById("screen");
 const context = canvas.getContext("2d");
@@ -34,7 +34,7 @@ const viewOfCamera = (camera) =>
   createView(camera, canvas.clientWidth, canvas.clientHeight);
 
 const ballSprite = createBallSprite();
-const playerSprites = await loadSprites("players.png");
+const playerSprites = await loadPlayerSprites("players.png");
 const debug = createDebugOverlay();
 
 let ball = createBall({ x: 0, y: 6 });

@@ -25,7 +25,7 @@ export const renderPitch = (context, view) => {
 const renderGrassBands = (context, view) => {
   const bandLength = PITCH.length / BAND_COUNT;
   const left = worldToScreen(view, { x: -PITCH.width / 2, y: 0 }).x;
-  const bandWidth = PITCH.width * view.pixelsPerUnit;
+  const bandWidthPixels = PITCH.width * view.pixelsPerUnit;
   for (let band = 0; band < BAND_COUNT; band += 1) {
     const top = worldToScreen(view, {
       x: 0,
@@ -34,7 +34,12 @@ const renderGrassBands = (context, view) => {
     context.fillStyle = GRASS_BANDS[band % GRASS_BANDS.length];
     // The extra pixel of height overlaps the next band, hiding the hairline gap
     // that rounding leaves between them at fractional camera positions.
-    context.fillRect(left, top, bandWidth, bandLength * view.pixelsPerUnit + 1);
+    context.fillRect(
+      left,
+      top,
+      bandWidthPixels,
+      bandLength * view.pixelsPerUnit + 1,
+    );
   }
 };
 
@@ -51,10 +56,10 @@ const drawMarking = (context, view, marking) => {
     context.lineTo(to.x, to.y);
   } else {
     const centre = worldToScreen(view, marking);
-    const radius = marking.radius * view.pixelsPerUnit;
+    const radiusPixels = marking.radius * view.pixelsPerUnit;
     const start = marking.kind === "arc" ? marking.start : 0;
     const end = marking.kind === "arc" ? marking.end : Math.PI * 2;
-    context.arc(centre.x, centre.y, radius, start, end);
+    context.arc(centre.x, centre.y, radiusPixels, start, end);
   }
   if (marking.kind === "spot") context.fill();
   else context.stroke();
@@ -66,15 +71,15 @@ const PLAYER_DRAW = Object.freeze({ width: 1.4, squash: 0.85 });
 
 export const renderPlayer = (context, view, player, sprites) => {
   const centre = worldToScreen(view, player.position);
-  const width = PLAYER_DRAW.width * view.pixelsPerUnit;
+  const widthPixels = PLAYER_DRAW.width * view.pixelsPerUnit;
 
   context.fillStyle = SHADOW;
   context.beginPath();
   context.ellipse(
     centre.x,
-    centre.y + (width * PLAYER_DRAW.squash) / 2,
-    width / 2,
-    (width / 2) * (1 - PLAYER_DRAW.squash) * 2,
+    centre.y + (widthPixels * PLAYER_DRAW.squash) / 2,
+    widthPixels / 2,
+    (widthPixels / 2) * (1 - PLAYER_DRAW.squash) * 2,
     0,
     0,
     Math.PI * 2,
@@ -85,8 +90,8 @@ export const renderPlayer = (context, view, player, sprites) => {
     context,
     sprites[player.facing],
     centre,
-    width,
-    width * PLAYER_DRAW.squash,
+    widthPixels,
+    widthPixels * PLAYER_DRAW.squash,
   );
 };
 
@@ -97,16 +102,16 @@ const SHADOW_FLATTENING = 0.7;
 // the gap between the two reads as z while both keep a fixed size.
 export const renderBall = (context, view, ball, sprite) => {
   const ground = worldToScreen(view, ball.position);
-  const height = ball.position.z * view.pixelsPerUnit;
-  const radius = BALL.radius * BALL_DRAW_SCALE * view.pixelsPerUnit;
+  const heightPixels = ball.position.z * view.pixelsPerUnit;
+  const radiusPixels = BALL.radius * BALL_DRAW_SCALE * view.pixelsPerUnit;
 
   context.fillStyle = SHADOW;
   context.beginPath();
   context.ellipse(
     ground.x,
     ground.y,
-    radius,
-    radius * SHADOW_FLATTENING,
+    radiusPixels,
+    radiusPixels * SHADOW_FLATTENING,
     0,
     0,
     Math.PI * 2,
@@ -116,8 +121,8 @@ export const renderBall = (context, view, ball, sprite) => {
   drawSprite(
     context,
     sprite,
-    { x: ground.x, y: ground.y - height },
-    radius * 2,
-    radius * 2,
+    { x: ground.x, y: ground.y - heightPixels },
+    radiusPixels * 2,
+    radiusPixels * 2,
   );
 };

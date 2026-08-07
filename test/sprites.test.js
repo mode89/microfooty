@@ -1,6 +1,19 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { keyColour, sliceFrames } from "../web/view/sprites.js";
+import {
+  keyColour,
+  sliceFrames,
+  validatePlayerSheet,
+} from "../web/view/sprites.js";
+
+test("the player sheet has three square 8 x 8 frames", () => {
+  assert.doesNotThrow(() => validatePlayerSheet(24, 8));
+});
+
+test("the player sheet rejects other frame dimensions", () => {
+  assert.throws(() => validatePlayerSheet(18, 6), /must be 24 x 8 px/);
+  assert.throws(() => validatePlayerSheet(24, 10), /must be 24 x 8 px/);
+});
 
 test("the slicer cuts a sheet into equal frames left to right", () => {
   assert.deepEqual(sliceFrames(24, 8, 3), [

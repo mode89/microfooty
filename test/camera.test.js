@@ -32,14 +32,14 @@ test("the camera centre maps to the middle of the screen", () => {
 test("the visible world width is the zoom, whatever the screen size", () => {
   const small = createView(createCamera(), 800, 450);
   const large = createView(createCamera(), 2560, 1440);
-  assert.equal(small.halfWidth, CAMERA.worldUnitsPerScreenWidth / 2);
-  assert.equal(large.halfWidth, CAMERA.worldUnitsPerScreenWidth / 2);
-  assert.ok(Math.abs(small.halfHeight - large.halfHeight) < 1e-9);
+  assert.equal(small.worldHalfWidth, CAMERA.worldUnitsPerScreenWidth / 2);
+  assert.equal(large.worldHalfWidth, CAMERA.worldUnitsPerScreenWidth / 2);
+  assert.ok(Math.abs(small.worldHalfHeight - large.worldHalfHeight) < 1e-9);
 });
 
 test("the view shows the agreed fraction of the pitch width", () => {
   const view = createView(createCamera(), 1280, 720);
-  const visibleWidth = view.halfWidth * 2;
+  const visibleWidth = view.worldHalfWidth * 2;
   const fraction = visibleWidth / PITCH.width;
   assert.ok(Math.abs(fraction - VISIBLE_PITCH_WIDTH_FRACTION) < 1e-9);
 });
@@ -78,8 +78,8 @@ test("the camera keeps the view inside the pitch plus its margin", () => {
   const clamped = clampCamera(createCamera({ x: 500, y: 500 }), view);
   const limitX = PITCH_BOUNDS.maxX + CAMERA.boundsMargin + 1e-9;
   const limitY = PITCH_BOUNDS.maxY + CAMERA.boundsMargin + 1e-9;
-  assert.ok(clamped.centre.x + view.halfWidth <= limitX);
-  assert.ok(clamped.centre.y + view.halfHeight <= limitY);
+  assert.ok(clamped.centre.x + view.worldHalfWidth <= limitX);
+  assert.ok(clamped.centre.y + view.worldHalfHeight <= limitY);
 });
 
 test("a view taller than the pitch is centred on it", () => {
