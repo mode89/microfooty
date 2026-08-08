@@ -1,7 +1,10 @@
 import { startLoop } from "./loop.js";
 import { createInput } from "./input.js";
 import { advanceBall, createBall } from "./world/ball.js";
+import { advanceDribble, createDribble, isCarrying } from "./world/kick.js";
 import {
+  PLAYER,
+  PLAYER_CARRYING,
   advancePlayer,
   createPlayer,
   directionFromInput,
@@ -41,6 +44,7 @@ let ball = createBall({ x: 0, y: 6 });
 let previousBall = ball;
 let player = createPlayer();
 let previousPlayer = player;
+let dribble = createDribble();
 let camera = createCamera();
 let previousCamera = camera;
 let debugVisible = false;
@@ -51,11 +55,21 @@ const tick = (seconds) => {
   if (actions.debug && !debugWasHeld) debugVisible = !debugVisible;
   debugWasHeld = actions.debug;
 
+  // Set by the previous tick's touch: this tick's touch needs the player to
+  // have moved first.
+  const carrying = isCarrying(dribble);
+
   previousPlayer = player;
-  player = advancePlayer(player, directionFromInput(actions), seconds);
+  player = advancePlayer(
+    player,
+    directionFromInput(actions),
+    seconds,
+    carrying ? PLAYER_CARRYING : PLAYER,
+  );
 
   previousBall = ball;
   ball = advanceBall(ball, seconds);
+  ({ dribble, ball } = advanceDribble(dribble, player, ball, seconds));
 
   previousCamera = camera;
   camera = clampCamera(

@@ -186,14 +186,25 @@ facing has hysteresis, so a direction hovering on a boundary does not oscillate.
 
 **Step 6 — Loose-ball dribbling**
 The ball is never attached to the player. When the ball is inside a control
-radius, is low enough, and the player is moving, the player applies a touch that
-nudges it ahead in the facing direction, with a cooldown between touches.
+radius, is low enough, and the player is running, the player touches it towards
+the place it should hold: one lead ahead along the direction of the run, not the
+drawn facing, which has four frames and would knock a diagonal run's ball
+sideways. A cooldown separates touches, except that a sharp turn earns one at
+once, since a ball left rolling where the run used to point is out of reach by
+the time the next touch falls due. A touch sends the ball out at the run's own
+pace and a little over, and may change the ball's velocity only so far, so a
+ball arriving faster than the run is deflected rather than trapped. Carrying the
+ball costs a little top speed, so a loose ball can be chased faster than it can
+be dribbled.
 *Review:* the player can run the length of the pitch keeping the ball a short
 distance ahead; the ball can be run past and lost; a bouncing ball is not
-controlled until it drops.
+controlled until it drops; a corner can be turned without losing the ball.
 *Tests:* no touch happens outside the control radius, above the height limit,
-during the cooldown, or when the player is stationary; a touch sets the ball
-speed relative to the player's speed so the ball outruns the player slightly.
+during the cooldown, below the minimum run speed, or from a standstill; a touch
+never sends the ball out at far more than the run's own speed; touches come one
+cooldown apart, and a sharp turn brings one sooner while a gentle drift does
+not; a run onto a loose ball, a straight dribble and a corner each keep the ball
+inside the control radius.
 
 **Step 7 — Tap and hold kick**
 One kick button. Charge builds while held, capped at a maximum. Release kicks

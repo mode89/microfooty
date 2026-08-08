@@ -4,6 +4,8 @@ export const subtract = (a, b) => ({ x: a.x - b.x, y: a.y - b.y });
 
 export const scale = (a, factor) => ({ x: a.x * factor, y: a.y * factor });
 
+export const dot = (a, b) => a.x * b.x + a.y * b.y;
+
 export const length = (a) => Math.hypot(a.x, a.y);
 
 export const clampLength = (a, max) => {

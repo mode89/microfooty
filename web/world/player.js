@@ -7,6 +7,14 @@ export const PLAYER = Object.freeze({
   braking: 24,
   diagonalBias: 0.15,
   facingHysteresis: 0.05,
+  carryingSpeedFactor: 0.9,
+});
+
+// Carrying the ball costs pace, so a loose ball can be chased faster than it
+// can be dribbled.
+export const PLAYER_CARRYING = Object.freeze({
+  ...PLAYER,
+  maxSpeed: PLAYER.maxSpeed * PLAYER.carryingSpeedFactor,
 });
 
 const FACING_DIRECTIONS = Object.freeze({

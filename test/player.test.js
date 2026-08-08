@@ -6,6 +6,7 @@ import {
   createPlayer,
   directionFromInput,
   PLAYER,
+  PLAYER_CARRYING,
 } from "../web/world/player.js";
 
 const TICK = 1 / 60;
@@ -62,6 +63,23 @@ test("releasing the keys brings the player to a complete stop", () => {
   const stopped = run(running, directionFromInput(keys()), ticksToStop);
   assert.equal(speed(stopped), 0);
   assert.ok(stopped.position.y > running.position.y);
+});
+
+test("a player carrying the ball runs slower than one chasing it", () => {
+  const topSpeedAfter = (settings, ticks) => {
+    let player = createPlayer();
+    for (let step = 0; step < ticks; step += 1)
+      player = advancePlayer(
+        player,
+        directionFromInput(keys("down")),
+        TICK,
+        settings,
+      );
+    return speed(player);
+  };
+  const carrying = topSpeedAfter(PLAYER_CARRYING, 120);
+  assert.ok(carrying < topSpeedAfter(PLAYER, 120));
+  assert.equal(carrying, PLAYER_CARRYING.maxSpeed);
 });
 
 test("the player stays inside the pitch", () => {
