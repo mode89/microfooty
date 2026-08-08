@@ -293,8 +293,10 @@ web/
 Team data for two fictional sides: name, kit colours, attacking direction, and
 a 4-4-2 of eleven named roles given as fractions of the pitch, so one formation
 serves both ends by mirroring. Kits are palette swaps of the same three frames,
-baked into offscreen canvases at load: the source art carries one shirt colour
-(a single blue) beside skin, hair and boots, so a kit is one colour mapping.
+baked into offscreen canvases at load: the source art stripes the shirt in a
+blue main colour and a white secondary one beside skin, hair and boots, so a
+kit is two colour mappings, and a kit whose two colours match wears a plain
+shirt. The keeper wears the team colour striped with black.
 This step also creates the match state that every later step adds to: the
 player list, the ball, and one control state per player. The keyboard keeps the
 M1 player, now one of the twenty-two, with the M1 movement, dribble and kick

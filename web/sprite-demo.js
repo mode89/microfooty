@@ -1,8 +1,9 @@
 import { startLoop } from "./loop.js";
 import {
   createBallSprite,
+  cutPlayerSprites,
   drawSprite,
-  loadPlayerSprites,
+  loadPlayerSheet,
   SHEET_FACINGS,
 } from "./view/sprites.js";
 
@@ -26,7 +27,7 @@ function fitToWindow() {
 window.addEventListener("resize", fitToWindow);
 fitToWindow();
 
-const sprites = await loadPlayerSprites("./players.png");
+const sprites = cutPlayerSprites(await loadPlayerSheet("./players.png"));
 const ballSprite = createBallSprite();
 
 let previousTravelDistance = 0;

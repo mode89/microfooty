@@ -10,17 +10,26 @@ const COLOUR_KEY = Object.freeze({ red: 255, green: 0, blue: 255 });
 const BALL_PIXELS = Object.freeze(["#.#", "...", ".#."]);
 const BALL_COLOURS = Object.freeze({ ".": "#fdfdfd", "#": "#1a1a1a" });
 
+export async function loadPlayerSheet(url) {
+  const sheet = await loadImage(url);
+  validatePlayerSheet(sheet.width, sheet.height);
+  return sheet;
+}
+
 // Cuts the sheet into frames and pre-scales each one with nearest-neighbour, so
 // per-frame drawing can keep smoothing on at fractional positions and still
-// show chunky pixels. The left facing is the mirror of the right one.
-export async function loadPlayerSprites(url, scale = SPRITE_SCALE) {
-  const image = await loadImage(url);
-  validatePlayerSheet(image.width, image.height);
-  const frames = sliceFrames(image.width, image.height, SHEET_FACINGS.length);
+// show chunky pixels. The left facing is the mirror of the right one. One
+// loaded sheet is cut once per kit, repainted differently each time.
+export function cutPlayerSprites(
+  sheet,
+  scale = SPRITE_SCALE,
+  repaint = (pixels) => pixels,
+) {
+  const frames = sliceFrames(sheet.width, sheet.height, SHEET_FACINGS.length);
   const sprites = Object.fromEntries(
     SHEET_FACINGS.map((facing, index) => [
       facing,
-      prescaleFrame(image, frames[index], scale),
+      prescaleFrame(sheet, frames[index], scale, repaint),
     ]),
   );
   return Object.freeze({ ...sprites, left: mirrorSprite(sprites.right) });
@@ -92,10 +101,10 @@ function loadImage(url) {
   });
 }
 
-function prescaleFrame(image, frame, scale) {
+function prescaleFrame(sheet, frame, scale, repaint) {
   const cut = createCanvas(frame.width, frame.height);
   cut.context.drawImage(
-    image,
+    sheet,
     frame.x,
     frame.y,
     frame.width,
@@ -106,8 +115,11 @@ function prescaleFrame(image, frame, scale) {
     frame.height,
   );
   const painted = cut.context.getImageData(0, 0, frame.width, frame.height);
+  // Repainted first, then keyed: a kit colour equal to the key would be made
+  // transparent, so kits keep off the magenta.
+  const recoloured = repaint(painted.data);
   cut.context.putImageData(
-    new ImageData(keyColour(painted.data), frame.width, frame.height),
+    new ImageData(keyColour(recoloured), frame.width, frame.height),
     0,
     0,
   );

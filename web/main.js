@@ -1,18 +1,7 @@
 import { startLoop } from "./loop.js";
 import { createInput } from "./input.js";
-import { advanceBall, createBall } from "./world/ball.js";
-import {
-  advanceDribble,
-  advanceKick,
-  createControl,
-  isCarrying,
-} from "./world/kick.js";
-import { PLAYER, PLAYER_CARRYING } from "./tuning.js";
-import {
-  advancePlayer,
-  createPlayer,
-  directionFromInput,
-} from "./world/player.js";
+import { advanceMatch, createMatch, keyboardPlayer } from "./world/match.js";
+import { allKits, kitOf } from "./world/team.js";
 import {
   clampCamera,
   createCamera,
@@ -21,7 +10,8 @@ import {
 } from "./view/camera.js";
 import { createDebugOverlay } from "./view/debug.js";
 import { renderBall, renderPitch, renderPlayer } from "./view/render.js";
-import { createBallSprite, loadPlayerSprites } from "./view/sprites.js";
+import { createBallSprite } from "./view/sprites.js";
+import { loadKitSprites } from "./view/kits.js";
 
 const canvas = document.getElementById("screen");
 const context = canvas.getContext("2d");
@@ -42,14 +32,11 @@ function viewOfCamera(camera) {
 }
 
 const ballSprite = createBallSprite();
-const playerSprites = await loadPlayerSprites("players.png");
+const kitSprites = await loadKitSprites("players.png", allKits());
 const debug = createDebugOverlay();
 
-let ball = createBall({ x: 0, y: 6 });
-let previousBall = ball;
-let player = createPlayer();
-let previousPlayer = player;
-let control = createControl();
+let match = createMatch();
+let previousMatch = match;
 let camera = createCamera();
 let previousCamera = camera;
 let debugVisible = false;
@@ -60,33 +47,13 @@ function tick(seconds) {
   if (actions.debug && !debugWasHeld) debugVisible = !debugVisible;
   debugWasHeld = actions.debug;
 
-  // Set by the previous tick's touch: this tick's touch needs the player to
-  // have moved first.
-  const carrying = isCarrying(control);
-
-  previousPlayer = player;
-  player = advancePlayer(
-    player,
-    directionFromInput(actions),
-    seconds,
-    carrying ? PLAYER_CARRYING : PLAYER,
-  );
-
-  previousBall = ball;
-  ball = advanceBall(ball, seconds);
-  ({ control, ball } = advanceDribble(control, player, ball, seconds));
-  ({ control, ball } = advanceKick(
-    control,
-    player,
-    ball,
-    actions.kick,
-    seconds,
-  ));
+  previousMatch = match;
+  match = advanceMatch(match, actions, seconds);
 
   previousCamera = camera;
   // The vector helpers read x and y only, so the ball's height never moves the camera.
   camera = clampCamera(
-    followCamera(camera, ball, seconds),
+    followCamera(camera, match.ball, seconds),
     viewOfCamera(camera),
   );
   debug.recordTick();
@@ -106,6 +73,22 @@ function interpolate3D(from, to, alpha) {
   };
 }
 
+// Drawn up the pitch, so a body standing nearer the camera covers one behind
+// it whatever order the match keeps its players in.
+function drawnPlayers(from, to, alpha) {
+  return to.players
+    .map((player, index) => ({
+      position: interpolate2D(
+        from.players[index].position,
+        player.position,
+        alpha,
+      ),
+      facing: player.facing,
+      sprites: kitSprites[kitOf(player.team, player.role).name],
+    }))
+    .sort((behind, infront) => behind.position.y - infront.position.y);
+}
+
 function render(alpha, wallClockSeconds) {
   debug.recordFrame(wallClockSeconds);
 
@@ -113,25 +96,26 @@ function render(alpha, wallClockSeconds) {
     centre: interpolate2D(previousCamera.centre, camera.centre, alpha),
   });
   renderPitch(context, view);
+  // Under every player, not sorted in with them: a ball lofted over a body
+  // would then draw in front of the body it is flying over.
   renderBall(
     context,
     view,
     {
-      position: interpolate3D(previousBall.position, ball.position, alpha),
+      position: interpolate3D(
+        previousMatch.ball.position,
+        match.ball.position,
+        alpha,
+      ),
     },
     ballSprite,
   );
-  renderPlayer(
-    context,
-    view,
-    {
-      position: interpolate2D(previousPlayer.position, player.position, alpha),
-      facing: player.facing,
-    },
-    playerSprites,
+  drawnPlayers(previousMatch, match, alpha).forEach((player) =>
+    renderPlayer(context, view, player, player.sprites),
   );
 
-  if (debugVisible) debug.draw(context, { ball, player });
+  if (debugVisible)
+    debug.draw(context, { ball: match.ball, player: keyboardPlayer(match) });
 }
 
 startLoop({ tick, render });

@@ -9,11 +9,11 @@ const FACING_DIRECTIONS = Object.freeze({
   right: { x: 1, y: 0 },
 });
 
-export function createPlayer(position = { x: 0, y: 0 }) {
+export function createPlayer(position = { x: 0, y: 0 }, facing = "up") {
   return {
     position,
     velocity: { x: 0, y: 0 },
-    facing: "up",
+    facing,
   };
 }
 

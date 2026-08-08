@@ -27,8 +27,14 @@ export const PITCH_BOUNDS = Object.freeze({
 
 const LEFT_SIDE = -1;
 const RIGHT_SIDE = 1;
-const TOP_END = -1;
-const BOTTOM_END = 1;
+
+// The two ends, named by the way a team runs to reach them, so a rule that
+// points at a goal takes a direction rather than being written twice.
+export const UP_THE_PITCH = -1;
+export const DOWN_THE_PITCH = 1;
+
+const TOP_END = UP_THE_PITCH;
+const BOTTOM_END = DOWN_THE_PITCH;
 
 function box(depth, width, side) {
   const halfBoxWidth = width / 2;
