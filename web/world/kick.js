@@ -1,8 +1,9 @@
-// Loose-ball dribbling. The ball is never attached to the player: a running
-// player who reaches a low ball touches it on, then has to catch up with it
-// again, so a bouncing ball cannot be controlled until it drops and a fast one
-// can be run past and lost.
+// Touching and kicking a loose ball. The ball is never attached to the player:
+// a running player who reaches a low ball touches it on, then has to catch up
+// with it again, so a bouncing ball cannot be controlled until it drops and a
+// fast one can be run past and lost.
 import { add, clampLength, dot, length, scale, subtract } from "../math/vec.js";
+import { launchBall } from "./ball.js";
 
 export const DRIBBLE = Object.freeze({
   controlRadius: 1,
@@ -15,41 +16,73 @@ export const DRIBBLE = Object.freeze({
   maxTouchSpeedChange: 10,
 });
 
-export const createDribble = () => ({ cooldown: 0, heading: null });
+// A kick is charged by holding the button down and struck on release. Power
+// and launch angle both rise with the charge, so a tap is a flat pass and a
+// full hold a rising shot. A kick reaches exactly as far as a touch, so a ball
+// that cannot be dribbled cannot be kicked either.
+export const KICK = Object.freeze({
+  range: DRIBBLE.controlRadius,
+  maximumHeight: DRIBBLE.maxTouchHeight,
+  cooldown: DRIBBLE.touchCooldown,
+  maximumCharge: 0.5,
+  minimumPower: 9,
+  maximumPower: 24,
+  maximumElevation: Math.PI / 8,
+});
 
-// The player is carrying the ball while the last touch is still fresh, which
-// is the window the cooldown already measures.
-export const isCarrying = (dribble) => dribble.cooldown > 0;
+// How the player stands with the ball: how long since they last played it and
+// which way they were running when they did, and the kick they are winding up
+// to play it next.
+export const createControl = () => ({
+  cooldown: 0,
+  heading: null,
+  charge: 0,
+  // Up the pitch, the way the player is drawn at kick-off, until a run aims it.
+  aim: { x: 0, y: -1 },
+});
+
+// The player is carrying the ball while their last touch is still fresh. A
+// kick starts the same cooldown but leaves no heading behind, and a ball that
+// has been kicked away is nobody's to carry.
+export const isCarrying = (control) =>
+  control.cooldown > 0 && control.heading !== null;
 
 export const advanceDribble = (
-  dribble,
+  control,
   player,
   ball,
   seconds,
   settings = DRIBBLE,
 ) => {
-  const cooled = { ...dribble, cooldown: countDown(dribble.cooldown, seconds) };
+  const cooled = { ...control, cooldown: countDown(control.cooldown, seconds) };
   if (!touchIsDue(cooled, player, ball, settings))
-    return { dribble: cooled, ball };
+    return { control: cooled, ball };
 
   return {
-    dribble: { cooldown: settings.touchCooldown, heading: headingOf(player) },
+    control: {
+      ...cooled,
+      cooldown: settings.touchCooldown,
+      heading: headingOf(player),
+    },
     ball: touch(player, ball, settings),
   };
 };
 
-const touchIsDue = (dribble, player, ball, settings) =>
+const touchIsDue = (control, player, ball, settings) =>
   length(player.velocity) >= settings.minimumRunSpeed &&
-  readyAgain(dribble, player, settings) &&
+  readyAgain(control, player, settings) &&
   ball.position.z <= settings.maxTouchHeight &&
   groundGap(player, ball) <= settings.controlRadius;
 
 // A sharp change of direction earns a touch at once. Waiting out the cooldown
 // would leave the ball rolling on where the run used to point, and by the time
-// the next touch fell due it would be out of reach.
-const readyAgain = (dribble, player, settings) =>
-  dribble.cooldown === 0 ||
-  dot(headingOf(player), dribble.heading) < Math.cos(settings.sharpTurnAngle);
+// the next touch fell due it would be out of reach. A ball that was kicked
+// rather than touched has no heading to compare, and no turn wins it back.
+const readyAgain = (control, player, settings) =>
+  control.cooldown === 0 ||
+  (control.heading !== null &&
+    dot(headingOf(player), control.heading) <
+      Math.cos(settings.sharpTurnAngle));
 
 // A touch sends the ball out at the run's own pace and a little over, so the
 // strength of a touch belongs to the player who makes it. The change a touch
@@ -88,6 +121,59 @@ const aimedVelocity = (player, ball, settings) => {
   return add(
     player.velocity,
     scale(subtract(target, ball.position), 1 / settings.touchCooldown),
+  );
+};
+
+export const advanceKick = (
+  control,
+  player,
+  ball,
+  buttonHeld,
+  seconds,
+  settings = KICK,
+) => {
+  const aim = aimOf(control, player);
+  if (buttonHeld)
+    return {
+      control: {
+        ...control,
+        aim,
+        charge: Math.min(control.charge + seconds, settings.maximumCharge),
+      },
+      ball,
+    };
+
+  const released = { ...control, aim, charge: 0 };
+  if (control.charge === 0 || !withinKickingRange(player, ball, settings))
+    return { control: released, ball };
+
+  // Kicking plays the ball, so it starts the touch cooldown: without that the
+  // next touch falls due while the pass is still at the feet and dribbles it
+  // back. It leaves no heading behind, so turning away cannot win the ball
+  // back either — a player who kicks up the pitch and runs down must let it go.
+  return {
+    control: { ...released, cooldown: settings.cooldown, heading: null },
+    ball: strike(ball, aim, control.charge, settings),
+  };
+};
+
+// The aim follows the run and outlives it, so a player who has stopped still
+// kicks the way they last ran rather than losing the ball's direction.
+const aimOf = (control, player) =>
+  length(player.velocity) === 0 ? control.aim : headingOf(player);
+
+const withinKickingRange = (player, ball, settings) =>
+  ball.position.z <= settings.maximumHeight &&
+  groundGap(player, ball) <= settings.range;
+
+const strike = (ball, aim, charge, settings) => {
+  const strength = charge / settings.maximumCharge;
+  return launchBall(
+    ball,
+    Math.atan2(aim.y, aim.x),
+    strength * settings.maximumElevation,
+    settings.minimumPower +
+      strength * (settings.maximumPower - settings.minimumPower),
   );
 };
 
