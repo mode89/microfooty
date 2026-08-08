@@ -9,14 +9,14 @@ import {
 
 const TICK = 1 / 60;
 
-const advanceFor = (ball, seconds, tick = TICK) => {
+function advanceFor(ball, seconds, tick = TICK) {
   let current = ball;
   for (let elapsed = 0; elapsed < seconds - 1e-9; elapsed += tick)
     current = advanceBall(current, tick);
   return current;
-};
+}
 
-const assertBallClose = (actual, expected, tolerance = 1e-9) => {
+function assertBallClose(actual, expected, tolerance = 1e-9) {
   ["x", "y", "z"].forEach((axis) => {
     assert.ok(
       Math.abs(actual.position[axis] - expected.position[axis]) < tolerance,
@@ -27,7 +27,7 @@ const assertBallClose = (actual, expected, tolerance = 1e-9) => {
       `velocity.${axis}`,
     );
   });
-};
+}
 
 test("a ball at rest stays at rest through a coarse step", () => {
   const ball = createBall({ x: 3, y: -7 });

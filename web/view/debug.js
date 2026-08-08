@@ -1,4 +1,4 @@
-export const createDebugOverlay = () => {
+export function createDebugOverlay() {
   const rates = {
     ticks: 0,
     frames: 0,
@@ -32,17 +32,23 @@ export const createDebugOverlay = () => {
       );
     },
   };
-};
+}
 
-const debugLines = (rates, ball, player) => [
-  `ticks/s ${rates.ticksPerSecond}`,
-  `frames/s ${rates.framesPerSecond}`,
-  `ball position ${vector3(ball.position)}`,
-  `ball velocity ${vector3(ball.velocity)}`,
-  `player position ${vector2(player.position)}`,
-  `player velocity ${vector2(player.velocity)}`,
-  `player facing ${player.facing}`,
-];
+function debugLines(rates, ball, player) {
+  return [
+    `ticks/s ${rates.ticksPerSecond}`,
+    `frames/s ${rates.framesPerSecond}`,
+    `ball position ${vector3(ball.position)}`,
+    `ball velocity ${vector3(ball.velocity)}`,
+    `player position ${vector2(player.position)}`,
+    `player velocity ${vector2(player.velocity)}`,
+    `player facing ${player.facing}`,
+  ];
+}
 
-const vector2 = ({ x, y }) => `${x.toFixed(2)} ${y.toFixed(2)}`;
-const vector3 = ({ x, y, z }) => `${vector2({ x, y })} ${z.toFixed(2)}`;
+function vector2({ x, y }) {
+  return `${x.toFixed(2)} ${y.toFixed(2)}`;
+}
+function vector3({ x, y, z }) {
+  return `${vector2({ x, y })} ${z.toFixed(2)}`;
+}

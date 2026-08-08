@@ -11,21 +11,25 @@ export const BALL = Object.freeze({
   minimumBounceImpactSpeed: 0.7,
 });
 
-export const createBall = (position = { x: 0, y: 0 }, settings = BALL) => ({
-  position: { x: position.x, y: position.y, z: settings.radius },
-  velocity: { x: 0, y: 0, z: 0 },
-});
+export function createBall(position = { x: 0, y: 0 }, settings = BALL) {
+  return {
+    position: { x: position.x, y: position.y, z: settings.radius },
+    velocity: { x: 0, y: 0, z: 0 },
+  };
+}
 
-export const launchBall = (ball, heading, elevation, power) => ({
-  position: ball.position,
-  velocity: {
-    x: Math.cos(heading) * Math.cos(elevation) * power,
-    y: Math.sin(heading) * Math.cos(elevation) * power,
-    z: Math.sin(elevation) * power,
-  },
-});
+export function launchBall(ball, heading, elevation, power) {
+  return {
+    position: ball.position,
+    velocity: {
+      x: Math.cos(heading) * Math.cos(elevation) * power,
+      y: Math.sin(heading) * Math.cos(elevation) * power,
+      z: Math.sin(elevation) * power,
+    },
+  };
+}
 
-export const advanceBall = (ball, seconds, settings = BALL) => {
+export function advanceBall(ball, seconds, settings = BALL) {
   let current = ball;
   let remaining = seconds;
 
@@ -46,16 +50,23 @@ export const advanceBall = (ball, seconds, settings = BALL) => {
   }
 
   return current;
-};
+}
 
-const isGrounded = (ball, settings) =>
-  ball.position.z <= settings.radius + EPSILON &&
-  Math.abs(ball.velocity.z) <= EPSILON;
+function isGrounded(ball, settings) {
+  return (
+    ball.position.z <= settings.radius + EPSILON &&
+    Math.abs(ball.velocity.z) <= EPSILON
+  );
+}
 
-const moveThroughAir = (ball, seconds, settings) =>
-  combineMotion(glide(ball, seconds, settings), fall(ball, seconds, settings));
+function moveThroughAir(ball, seconds, settings) {
+  return combineMotion(
+    glide(ball, seconds, settings),
+    fall(ball, seconds, settings),
+  );
+}
 
-const secondsUntilGround = (ball, settings) => {
+function secondsUntilGround(ball, settings) {
   const height = Math.max(0, ball.position.z - settings.radius);
   if (height === 0)
     return ball.velocity.z > 0 ? (2 * ball.velocity.z) / settings.gravity : 0;
@@ -66,9 +77,9 @@ const secondsUntilGround = (ball, settings) => {
   return ball.velocity.z >= 0
     ? (ball.velocity.z + root) / settings.gravity
     : (2 * height) / (root - ball.velocity.z);
-};
+}
 
-const resolveImpact = (ball, settings) => {
+function resolveImpact(ball, settings) {
   const impactSpeed = -ball.velocity.z;
   const bouncing = impactSpeed >= settings.minimumBounceImpactSpeed;
   const horizontalRetention = bouncing ? settings.bounceHorizontalRetention : 1;
@@ -85,11 +96,11 @@ const resolveImpact = (ball, settings) => {
       speed: bouncing ? impactSpeed * settings.restitution : 0,
     },
   );
-};
+}
 
 // Constant deceleration ends at a defined speed transition, so rolling stops
 // at the same position whether the duration is advanced at once or in parts.
-const roll = (ball, seconds, settings) => {
+function roll(ball, seconds, settings) {
   const speed = Math.hypot(ball.velocity.x, ball.velocity.y);
   if (speed <= settings.rollingStopSpeed)
     return {
@@ -119,11 +130,11 @@ const roll = (ball, seconds, settings) => {
     },
     velocity: { x: ball.velocity.x * kept, y: ball.velocity.y * kept },
   };
-};
+}
 
 // Exponential air drag is integrated exactly. expm1 preserves travel distance
 // when drag is too small for subtracting the exponential from one accurately.
-const glide = (ball, seconds, settings) => {
+function glide(ball, seconds, settings) {
   if (settings.airDrag === 0)
     return {
       position: {
@@ -142,17 +153,21 @@ const glide = (ball, seconds, settings) => {
     },
     velocity: { x: ball.velocity.x * kept, y: ball.velocity.y * kept },
   };
-};
+}
 
-const fall = (ball, seconds, settings) => ({
-  height:
-    ball.position.z +
-    ball.velocity.z * seconds -
-    0.5 * settings.gravity * seconds * seconds,
-  speed: ball.velocity.z - settings.gravity * seconds,
-});
+function fall(ball, seconds, settings) {
+  return {
+    height:
+      ball.position.z +
+      ball.velocity.z * seconds -
+      0.5 * settings.gravity * seconds * seconds,
+    speed: ball.velocity.z - settings.gravity * seconds,
+  };
+}
 
-const combineMotion = (horizontal, vertical) => ({
-  position: { ...horizontal.position, z: vertical.height },
-  velocity: { ...horizontal.velocity, z: vertical.speed },
-});
+function combineMotion(horizontal, vertical) {
+  return {
+    position: { ...horizontal.position, z: vertical.height },
+    velocity: { ...horizontal.velocity, z: vertical.speed },
+  };
+}

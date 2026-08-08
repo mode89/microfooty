@@ -16,12 +16,12 @@ const LABEL = "#e8f5e9";
 const canvas = document.getElementById("screen");
 const context = canvas.getContext("2d");
 
-const fitToWindow = () => {
+function fitToWindow() {
   const ratio = window.devicePixelRatio || 1;
   canvas.width = Math.round(canvas.clientWidth * ratio);
   canvas.height = Math.round(canvas.clientHeight * ratio);
   context.setTransform(ratio, 0, 0, ratio, 0, 0);
-};
+}
 
 window.addEventListener("resize", fitToWindow);
 fitToWindow();
@@ -32,12 +32,12 @@ const ballSprite = createBallSprite();
 let previousTravelDistance = 0;
 let currentTravelDistance = 0;
 
-const tick = (seconds) => {
+function tick(seconds) {
   previousTravelDistance = currentTravelDistance;
   currentTravelDistance += DRIFT_SPEED * seconds;
-};
+}
 
-const render = (alpha) => {
+function render(alpha) {
   const width = canvas.clientWidth;
   const height = canvas.clientHeight;
   context.fillStyle = BACKGROUND;
@@ -78,6 +78,6 @@ const render = (alpha) => {
     BALL_DISPLAY_SIZE,
     BALL_DISPLAY_SIZE,
   );
-};
+}
 
 startLoop({ tick, render });

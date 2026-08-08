@@ -8,11 +8,12 @@ import {
   MAX_FRAME_SECONDS,
 } from "../web/loop.js";
 
-const closeTo = (actual, expected, tolerance = 1e-9) =>
-  assert.ok(
+function closeTo(actual, expected, tolerance = 1e-9) {
+  return assert.ok(
     Math.abs(actual - expected) <= tolerance,
     `${actual} is not within ${tolerance} of ${expected}`,
   );
+}
 
 test("a frame shorter than a tick makes no tick and grows the accumulator", () => {
   const step = advance(0, TICK_SECONDS / 2);
@@ -78,10 +79,10 @@ test("the loop ticks the simulation and renders once per frame", () => {
     schedule: (frame) => frames.push(frame),
   });
 
-  const runFrame = (seconds) => {
+  function runFrame(seconds) {
     clock += seconds;
     frames.pop()();
-  };
+  }
 
   runFrame(TICK_SECONDS * 2);
   runFrame(TICK_SECONDS / 2);

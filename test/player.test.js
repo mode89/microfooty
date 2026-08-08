@@ -11,24 +11,29 @@ import {
 
 const TICK = 1 / 60;
 
-const keys = (...held) =>
-  Object.fromEntries(
+function keys(...held) {
+  return Object.fromEntries(
     ["up", "down", "left", "right"].map((key) => [key, held.includes(key)]),
   );
+}
 
-const speed = (player) => Math.hypot(player.velocity.x, player.velocity.y);
+function speed(player) {
+  return Math.hypot(player.velocity.x, player.velocity.y);
+}
 
-const run = (player, direction, ticks) => {
+function run(player, direction, ticks) {
   let current = player;
   for (let step = 0; step < ticks; step += 1)
     current = advancePlayer(current, direction, TICK);
   return current;
-};
+}
 
-const heading = (degrees) => ({
-  x: Math.cos((degrees * Math.PI) / 180),
-  y: -Math.sin((degrees * Math.PI) / 180),
-});
+function heading(degrees) {
+  return {
+    x: Math.cos((degrees * Math.PI) / 180),
+    y: -Math.sin((degrees * Math.PI) / 180),
+  };
+}
 
 test("a diagonal run reaches the same top speed as a straight run", () => {
   const straight = run(createPlayer(), directionFromInput(keys("right")), 120);
@@ -66,7 +71,7 @@ test("releasing the keys brings the player to a complete stop", () => {
 });
 
 test("a player carrying the ball runs slower than one chasing it", () => {
-  const topSpeedAfter = (settings, ticks) => {
+  function topSpeedAfter(settings, ticks) {
     let player = createPlayer();
     for (let step = 0; step < ticks; step += 1)
       player = advancePlayer(
@@ -76,7 +81,7 @@ test("a player carrying the ball runs slower than one chasing it", () => {
         settings,
       );
     return speed(player);
-  };
+  }
   const carrying = topSpeedAfter(PLAYER_CARRYING, 120);
   assert.ok(carrying < topSpeedAfter(PLAYER, 120));
   assert.equal(carrying, PLAYER_CARRYING.maxSpeed);

@@ -3,7 +3,7 @@ import test from "node:test";
 
 import { createInput } from "../web/input.js";
 
-const createEventTarget = () => {
+function createEventTarget() {
   const listeners = new Map();
 
   return {
@@ -24,7 +24,7 @@ const createEventTarget = () => {
       return event;
     },
   };
-};
+}
 
 test("releasing one key alias keeps its action held by another alias", () => {
   const target = createEventTarget();

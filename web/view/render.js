@@ -9,7 +9,7 @@ const SURROUND = "#123d1a";
 const PAINT = "#eef7ee";
 const SHADOW = "rgba(0, 0, 0, 0.35)";
 
-export const renderPitch = (context, view) => {
+export function renderPitch(context, view) {
   context.fillStyle = SURROUND;
   context.fillRect(0, 0, view.screenWidth, view.screenHeight);
 
@@ -19,10 +19,10 @@ export const renderPitch = (context, view) => {
   context.fillStyle = PAINT;
   context.lineWidth = PITCH.lineWidth * view.pixelsPerUnit;
   PITCH_MARKINGS.forEach((marking) => drawMarking(context, view, marking));
-};
+}
 
 // Mowing stripes run across the pitch width, so they stack along its length.
-const renderGrassBands = (context, view) => {
+function renderGrassBands(context, view) {
   const bandLength = PITCH.length / BAND_COUNT;
   const left = worldToScreen(view, { x: -PITCH.width / 2, y: 0 }).x;
   const bandWidthPixels = PITCH.width * view.pixelsPerUnit;
@@ -41,9 +41,9 @@ const renderGrassBands = (context, view) => {
       bandLength * view.pixelsPerUnit + 1,
     );
   }
-};
+}
 
-const drawMarking = (context, view, marking) => {
+function drawMarking(context, view, marking) {
   context.beginPath();
   if (marking.kind === "rect") {
     const from = worldToScreen(view, { x: marking.minX, y: marking.minY });
@@ -63,7 +63,7 @@ const drawMarking = (context, view, marking) => {
   }
   if (marking.kind === "spot") context.fill();
   else context.stroke();
-};
+}
 
 // Sprites are squashed vertically, the Sensi trick that reads as a body seen
 // from a camera tilted slightly away from straight down.
@@ -75,7 +75,7 @@ const PLAYER_DRAW = Object.freeze({
   feetRow: 7 / 8,
 });
 
-export const renderPlayer = (context, view, player, sprites) => {
+export function renderPlayer(context, view, player, sprites) {
   const feet = worldToScreen(view, player.position);
   const widthPixels = PLAYER_DRAW.width * view.pixelsPerUnit;
   const heightPixels = widthPixels * PLAYER_DRAW.squash;
@@ -100,14 +100,14 @@ export const renderPlayer = (context, view, player, sprites) => {
     widthPixels,
     heightPixels,
   );
-};
+}
 
 const BALL_DRAW_SCALE = 2;
 const SHADOW_FLATTENING = 0.7;
 
 // Height only moves the ball up the screen; its shadow stays on the ground, so
 // the gap between the two reads as z while both keep a fixed size.
-export const renderBall = (context, view, ball, sprite) => {
+export function renderBall(context, view, ball, sprite) {
   const ground = worldToScreen(view, ball.position);
   const heightPixels = ball.position.z * view.pixelsPerUnit;
   const radiusPixels = BALL.radius * BALL_DRAW_SCALE * view.pixelsPerUnit;
@@ -132,4 +132,4 @@ export const renderBall = (context, view, ball, sprite) => {
     radiusPixels * 2,
     radiusPixels * 2,
   );
-};
+}

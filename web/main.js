@@ -28,18 +28,19 @@ const canvas = document.getElementById("screen");
 const context = canvas.getContext("2d");
 const input = createInput();
 
-const fitToWindow = () => {
+function fitToWindow() {
   const ratio = window.devicePixelRatio || 1;
   canvas.width = Math.round(canvas.clientWidth * ratio);
   canvas.height = Math.round(canvas.clientHeight * ratio);
   context.setTransform(ratio, 0, 0, ratio, 0, 0);
-};
+}
 
 window.addEventListener("resize", fitToWindow);
 fitToWindow();
 
-const viewOfCamera = (camera) =>
-  createView(camera, canvas.clientWidth, canvas.clientHeight);
+function viewOfCamera(camera) {
+  return createView(camera, canvas.clientWidth, canvas.clientHeight);
+}
 
 const ballSprite = createBallSprite();
 const playerSprites = await loadPlayerSprites("players.png");
@@ -55,7 +56,7 @@ let previousCamera = camera;
 let debugVisible = false;
 let debugWasHeld = false;
 
-const tick = (seconds) => {
+function tick(seconds) {
   const actions = input.read();
   if (actions.debug && !debugWasHeld) debugVisible = !debugVisible;
   debugWasHeld = actions.debug;
@@ -93,19 +94,23 @@ const tick = (seconds) => {
     viewOfCamera(camera),
   );
   debug.recordTick();
-};
+}
 
-const interpolate2D = (from, to, alpha) => ({
-  x: from.x + (to.x - from.x) * alpha,
-  y: from.y + (to.y - from.y) * alpha,
-});
+function interpolate2D(from, to, alpha) {
+  return {
+    x: from.x + (to.x - from.x) * alpha,
+    y: from.y + (to.y - from.y) * alpha,
+  };
+}
 
-const interpolate3D = (from, to, alpha) => ({
-  ...interpolate2D(from, to, alpha),
-  z: from.z + (to.z - from.z) * alpha,
-});
+function interpolate3D(from, to, alpha) {
+  return {
+    ...interpolate2D(from, to, alpha),
+    z: from.z + (to.z - from.z) * alpha,
+  };
+}
 
-const render = (alpha, wallClockSeconds) => {
+function render(alpha, wallClockSeconds) {
   debug.recordFrame(wallClockSeconds);
 
   const view = viewOfCamera({
@@ -131,6 +136,6 @@ const render = (alpha, wallClockSeconds) => {
   );
 
   if (debugVisible) debug.draw(context, { ball, player });
-};
+}
 
 startLoop({ tick, render });

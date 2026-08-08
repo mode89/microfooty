@@ -27,7 +27,7 @@ export function startLoop({
   let accumulator = 0;
   let previous = now();
 
-  const frame = () => {
+  function frame() {
     const current = now();
     const wallClockSeconds = current - previous;
     previous = current;
@@ -43,7 +43,7 @@ export function startLoop({
     render(step.alpha, wallClockSeconds);
 
     schedule(frame);
-  };
+  }
 
   schedule(frame);
 }

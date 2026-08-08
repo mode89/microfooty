@@ -14,7 +14,9 @@ import {
 import { PITCH, PITCH_BOUNDS, PITCH_MARKINGS } from "../web/world/pitch.js";
 
 const TICK = 1 / 60;
-const still = (position) => ({ position, velocity: { x: 0, y: 0 } });
+function still(position) {
+  return { position, velocity: { x: 0, y: 0 } };
+}
 
 test("world to screen and back is the identity", () => {
   const view = createView(createCamera({ x: 12, y: -7 }), 1280, 720);

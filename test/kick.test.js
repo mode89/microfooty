@@ -23,42 +23,53 @@ const TICK = 1 / 60;
 // loose reading of that word, and it is the ceiling the rules may not pass.
 const MOST_A_TOUCH_MAY_OUTRUN = 2;
 
-const keys = (...held) =>
-  Object.fromEntries(
+function keys(...held) {
+  return Object.fromEntries(
     ["up", "down", "left", "right"].map((key) => [key, held.includes(key)]),
   );
+}
 
 // The pitch runs along +y, so a player running "down" heads down the screen
 // and the ball ahead of them is at a larger y.
-const runningPlayer = (speed = PLAYER.maxSpeed) => ({
-  position: { x: 0, y: 0 },
-  velocity: { x: 0, y: speed },
-});
+function runningPlayer(speed = PLAYER.maxSpeed) {
+  return {
+    position: { x: 0, y: 0 },
+    velocity: { x: 0, y: speed },
+  };
+}
 
-const ballAhead = (distance, height = BALL.radius) => ({
-  position: { x: 0, y: distance, z: height },
-  velocity: { x: 0, y: 0, z: 0 },
-});
+function ballAhead(distance, height = BALL.radius) {
+  return {
+    position: { x: 0, y: distance, z: height },
+    velocity: { x: 0, y: 0, z: 0 },
+  };
+}
 
-const ballBeside = (distance) => ({
-  position: { x: distance, y: 0, z: BALL.radius },
-  velocity: { x: 0, y: 0, z: 0 },
-});
+function ballBeside(distance) {
+  return {
+    position: { x: distance, y: 0, z: BALL.radius },
+    velocity: { x: 0, y: 0, z: 0 },
+  };
+}
 
-const afterOneTick = (player, ball, control = createControl()) =>
-  advanceDribble(control, player, ball, TICK);
+function afterOneTick(player, ball, control = createControl()) {
+  return advanceDribble(control, player, ball, TICK);
+}
 
-const speed = (body) => Math.hypot(body.velocity.x, body.velocity.y);
+function speed(body) {
+  return Math.hypot(body.velocity.x, body.velocity.y);
+}
 
-const gapBetween = (player, ball) =>
-  Math.hypot(
+function gapBetween(player, ball) {
+  return Math.hypot(
     ball.position.x - player.position.x,
     ball.position.y - player.position.y,
   );
+}
 
 // One leg of a dribbling run, stepped as web/main.js steps it: both bodies
 // move, then the touch is applied. A touch shows itself as a full cooldown.
-const dribbleFor = (start, direction, ticks) => {
+function dribbleFor(start, direction, ticks) {
   let { player, ball, control } = start;
   const touchTicks = [];
   let widestGap = 0;
@@ -76,13 +87,15 @@ const dribbleFor = (start, direction, ticks) => {
     widestGap = Math.max(widestGap, gapBetween(player, ball));
   }
   return { player, ball, control, touchTicks, widestGap };
-};
+}
 
-const standingOver = (ball) => ({
-  player: createPlayer(),
-  ball,
-  control: createControl(),
-});
+function standingOver(ball) {
+  return {
+    player: createPlayer(),
+    ball,
+    control: createControl(),
+  };
+}
 
 // A hold time is spent in whole ticks with a part tick left over, so this much
 // of it counts as spent.
@@ -90,7 +103,7 @@ const LAST_SLICE = 1e-9;
 
 // The button is held down for a run of ticks, carrying every result forward as
 // web/main.js does, so anything a held tick does to the ball is kept.
-const holdFor = (player, ball, heldSeconds, control = createControl()) => {
+function holdFor(player, ball, heldSeconds, control = createControl()) {
   let held = { control, ball };
   for (let left = heldSeconds; left > LAST_SLICE; left -= TICK)
     held = advanceKick(
@@ -101,18 +114,24 @@ const holdFor = (player, ball, heldSeconds, control = createControl()) => {
       Math.min(TICK, left),
     );
   return held;
-};
+}
 
 // The release tick is the one that strikes the ball.
-const holdThenRelease = (player, ball, heldSeconds, control) => {
+function holdThenRelease(player, ball, heldSeconds, control) {
   const held = holdFor(player, ball, heldSeconds, control);
   return advanceKick(held.control, player, held.ball, false, TICK);
-};
+}
 
-const powerOf = (ball) => Math.hypot(speed(ball), ball.velocity.z);
+function powerOf(ball) {
+  return Math.hypot(speed(ball), ball.velocity.z);
+}
 
-const elevationOf = (ball) =>
-  Math.atan2(ball.velocity.z, Math.hypot(ball.velocity.x, ball.velocity.y));
+function elevationOf(ball) {
+  return Math.atan2(
+    ball.velocity.z,
+    Math.hypot(ball.velocity.x, ball.velocity.y),
+  );
+}
 
 // The share of a full charge that one held tick adds, which is the margin a
 // tap may sit above the flat minimum.
@@ -384,8 +403,9 @@ test("a player runs onto a ball, dribbles it and turns a corner with it", () => 
 test("the charge builds while the button is held and stops at the maximum", () => {
   const player = runningPlayer();
   const ball = ballAhead(DRIBBLE.idealLead);
-  const hold = (control, seconds) =>
-    advanceKick(control, player, ball, true, seconds).control;
+  function hold(control, seconds) {
+    return advanceKick(control, player, ball, true, seconds).control;
+  }
 
   const oneTick = hold(createControl(), TICK);
   assert.ok(Math.abs(oneTick.charge - TICK) < 1e-9);

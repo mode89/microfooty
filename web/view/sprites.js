@@ -13,7 +13,7 @@ const BALL_COLOURS = Object.freeze({ ".": "#fdfdfd", "#": "#1a1a1a" });
 // Cuts the sheet into frames and pre-scales each one with nearest-neighbour, so
 // per-frame drawing can keep smoothing on at fractional positions and still
 // show chunky pixels. The left facing is the mirror of the right one.
-export const loadPlayerSprites = async (url, scale = SPRITE_SCALE) => {
+export async function loadPlayerSprites(url, scale = SPRITE_SCALE) {
   const image = await loadImage(url);
   validatePlayerSheet(image.width, image.height);
   const frames = sliceFrames(image.width, image.height, SHEET_FACINGS.length);
@@ -24,9 +24,9 @@ export const loadPlayerSprites = async (url, scale = SPRITE_SCALE) => {
     ]),
   );
   return Object.freeze({ ...sprites, left: mirrorSprite(sprites.right) });
-};
+}
 
-export const createBallSprite = (scale = SPRITE_SCALE) => {
+export function createBallSprite(scale = SPRITE_SCALE) {
   const size = BALL_PIXELS.length;
   const drawn = createCanvas(size, size);
   BALL_PIXELS.forEach((row, y) =>
@@ -36,26 +36,27 @@ export const createBallSprite = (scale = SPRITE_SCALE) => {
     }),
   );
   return scaleSprite(drawn.canvas, size * scale, size * scale);
-};
+}
 
-export const drawSprite = (context, sprite, centre, width, height) =>
-  context.drawImage(
+export function drawSprite(context, sprite, centre, width, height) {
+  return context.drawImage(
     sprite,
     centre.x - width / 2,
     centre.y - height / 2,
     width,
     height,
   );
+}
 
-export const validatePlayerSheet = (sheetWidth, sheetHeight) => {
+export function validatePlayerSheet(sheetWidth, sheetHeight) {
   const expectedWidth = PLAYER_FRAME_SIZE * SHEET_FACINGS.length;
   if (sheetWidth !== expectedWidth || sheetHeight !== PLAYER_FRAME_SIZE)
     throw new Error(
       `player sheet must be ${expectedWidth} x ${PLAYER_FRAME_SIZE} px (three square 8 x 8 frames), got ${sheetWidth} x ${sheetHeight} px`,
     );
-};
+}
 
-export const sliceFrames = (sheetWidth, sheetHeight, frameCount) => {
+export function sliceFrames(sheetWidth, sheetHeight, frameCount) {
   const width = sheetWidth / frameCount;
   if (!Number.isInteger(width))
     throw new Error(
@@ -67,9 +68,9 @@ export const sliceFrames = (sheetWidth, sheetHeight, frameCount) => {
     width,
     height: sheetHeight,
   }));
-};
+}
 
-export const keyColour = (pixels, key = COLOUR_KEY) => {
+export function keyColour(pixels, key = COLOUR_KEY) {
   const keyed = new Uint8ClampedArray(pixels);
   for (let byte = 0; byte < keyed.length; byte += 4) {
     if (
@@ -80,17 +81,18 @@ export const keyColour = (pixels, key = COLOUR_KEY) => {
       keyed[byte + 3] = 0;
   }
   return keyed;
-};
+}
 
-const loadImage = (url) =>
-  new Promise((resolve, reject) => {
+function loadImage(url) {
+  return new Promise((resolve, reject) => {
     const image = new Image();
     image.onload = () => resolve(image);
     image.onerror = () => reject(new Error(`cannot load ${url}`));
     image.src = url;
   });
+}
 
-const prescaleFrame = (image, frame, scale) => {
+function prescaleFrame(image, frame, scale) {
   const cut = createCanvas(frame.width, frame.height);
   cut.context.drawImage(
     image,
@@ -110,26 +112,26 @@ const prescaleFrame = (image, frame, scale) => {
     0,
   );
   return scaleSprite(cut.canvas, frame.width * scale, frame.height * scale);
-};
+}
 
-const scaleSprite = (source, width, height) => {
+function scaleSprite(source, width, height) {
   const scaled = createCanvas(width, height);
   scaled.context.imageSmoothingEnabled = false;
   scaled.context.drawImage(source, 0, 0, width, height);
   return scaled.canvas;
-};
+}
 
-const mirrorSprite = (sprite) => {
+function mirrorSprite(sprite) {
   const mirrored = createCanvas(sprite.width, sprite.height);
   mirrored.context.translate(sprite.width, 0);
   mirrored.context.scale(-1, 1);
   mirrored.context.drawImage(sprite, 0, 0);
   return mirrored.canvas;
-};
+}
 
-const createCanvas = (width, height) => {
+function createCanvas(width, height) {
   const canvas = document.createElement("canvas");
   canvas.width = width;
   canvas.height = height;
   return { canvas, context: canvas.getContext("2d") };
-};
+}

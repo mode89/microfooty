@@ -30,7 +30,7 @@ const RIGHT_SIDE = 1;
 const TOP_END = -1;
 const BOTTOM_END = 1;
 
-const box = (depth, width, side) => {
+function box(depth, width, side) {
   const halfBoxWidth = width / 2;
   const goalLine = side * halfLength;
   const inner = goalLine - side * depth;
@@ -41,29 +41,33 @@ const box = (depth, width, side) => {
     minY: Math.min(goalLine, inner),
     maxY: Math.max(goalLine, inner),
   };
-};
+}
 
 // Each arc is the quarter circle that opens into the pitch, so its start angle
 // follows the corner's quadrant (canvas angles grow clockwise with +y down).
-const cornerArc = (sideX, sideY, quarterTurns) => ({
-  kind: "arc",
-  x: sideX * halfWidth,
-  y: sideY * halfLength,
-  radius: PITCH.cornerArcRadius,
-  start: (quarterTurns * Math.PI) / 2,
-  end: ((quarterTurns + 1) * Math.PI) / 2,
-});
+function cornerArc(sideX, sideY, quarterTurns) {
+  return {
+    kind: "arc",
+    x: sideX * halfWidth,
+    y: sideY * halfLength,
+    radius: PITCH.cornerArcRadius,
+    start: (quarterTurns * Math.PI) / 2,
+    end: ((quarterTurns + 1) * Math.PI) / 2,
+  };
+}
 
-const penaltySpot = (side) => ({
-  kind: "spot",
-  x: 0,
-  y: side * (halfLength - PITCH.penaltySpotDistance),
-  radius: PITCH.spotRadius,
-});
+function penaltySpot(side) {
+  return {
+    kind: "spot",
+    x: 0,
+    y: side * (halfLength - PITCH.penaltySpotDistance),
+    radius: PITCH.spotRadius,
+  };
+}
 
 // Only the part of the circle around the penalty spot that falls outside the
 // penalty area is marked, so the arc spans the angle where it clears the box.
-const penaltyArc = (side) => {
+function penaltyArc(side) {
   const spot = penaltySpot(side);
   const toBoxEdge = PITCH.penaltyAreaDepth - PITCH.penaltySpotDistance;
   const half = Math.acos(toBoxEdge / PITCH.centreCircleRadius);
@@ -76,7 +80,7 @@ const penaltyArc = (side) => {
     start: towardsCentre - half,
     end: towardsCentre + half,
   };
-};
+}
 
 // Touchlines and goal lines are the outer rectangle.
 export const PITCH_MARKINGS = Object.freeze([

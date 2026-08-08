@@ -1,16 +1,28 @@
-export const add = (a, b) => ({ x: a.x + b.x, y: a.y + b.y });
+export function add(a, b) {
+  return { x: a.x + b.x, y: a.y + b.y };
+}
 
-export const subtract = (a, b) => ({ x: a.x - b.x, y: a.y - b.y });
+export function subtract(a, b) {
+  return { x: a.x - b.x, y: a.y - b.y };
+}
 
-export const scale = (a, factor) => ({ x: a.x * factor, y: a.y * factor });
+export function scale(a, factor) {
+  return { x: a.x * factor, y: a.y * factor };
+}
 
-export const dot = (a, b) => a.x * b.x + a.y * b.y;
+export function dot(a, b) {
+  return a.x * b.x + a.y * b.y;
+}
 
-export const length = (a) => Math.hypot(a.x, a.y);
+export function length(a) {
+  return Math.hypot(a.x, a.y);
+}
 
-export const clampLength = (a, max) => {
+export function clampLength(a, max) {
   const size = length(a);
   return size > max ? scale(a, max / size) : a;
-};
+}
 
-export const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
+export function clamp(value, min, max) {
+  return Math.min(Math.max(value, min), max);
+}

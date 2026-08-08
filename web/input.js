@@ -28,12 +28,12 @@ const ACTIONS = Object.keys(EMPTY_INPUT);
 export function createInput(target = window) {
   const heldCodes = new Set();
 
-  const set = (event, down) => {
+  function set(event, down) {
     if (!KEY_BINDINGS[event.code]) return;
     event.preventDefault();
     if (down) heldCodes.add(event.code);
     else heldCodes.delete(event.code);
-  };
+  }
 
   target.addEventListener("keydown", (event) => set(event, true));
   target.addEventListener("keyup", (event) => set(event, false));

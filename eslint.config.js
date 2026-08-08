@@ -7,6 +7,9 @@ export default [
   js.configs.recommended,
   prettier,
   {
+    rules: { "func-style": ["error", "declaration"] },
+  },
+  {
     files: ["web/**/*.js"],
     languageOptions: { globals: globals.browser },
   },
