@@ -7,7 +7,7 @@ import {
 } from "../web/world/match.js";
 import { homePosition } from "../web/world/formation.js";
 import { TEAMS } from "../web/world/team.js";
-import { BODY, DRIBBLE, PLAYER, STEERING } from "../web/tuning.js";
+import { BALL, BODY, DRIBBLE, PLAYER, STEERING } from "../web/tuning.js";
 
 const STILL = Object.freeze({
   up: false,
@@ -26,6 +26,10 @@ const TICK = 1 / 60;
 // only way a test can set up a touch.
 const STRIDE_BEHIND_THE_BALL = 0.9;
 
+// Far enough up the pitch to slide every home clear of the arrival band the
+// players settled in at kick-off.
+const BALL_UP_THE_PITCH = Object.freeze({ x: 0, y: -20 });
+
 // Places named players, keyed by their index in the match, and leaves the rest
 // in their formation.
 function placed(match, positions) {
@@ -41,6 +45,13 @@ function standingBehindTheBall(match) {
   return placed(match, {
     [match.keyboardIndex]: { x: 0, y: STRIDE_BEHIND_THE_BALL },
   });
+}
+
+function withBallAt(match, { x, y }) {
+  return {
+    ...match,
+    ball: { ...match.ball, position: { x, y, z: BALL.radius } },
+  };
 }
 
 function indexOfRole(match, name) {
@@ -79,12 +90,35 @@ test("a match holds one control per player", () => {
 });
 
 test("every player starts on the home place of their role", () => {
-  createMatch().players.forEach((player) =>
+  const match = createMatch();
+  match.players.forEach((player) =>
     assert.deepEqual(
       player.position,
-      homePosition(player.role, player.team.attackingDirection),
+      homePosition(
+        player.role,
+        player.team.attackingDirection,
+        match.ball.position,
+      ),
     ),
   );
+});
+
+test("a standing player runs to the home the ball asks for, not the kick-off one", () => {
+  const match = createMatch();
+  const moved = play(withBallAt(match, BALL_UP_THE_PITCH), STILL, 120);
+  moved.players.forEach((player, index) => {
+    if (index === match.keyboardIndex) return;
+    const target = homePosition(
+      player.role,
+      player.team.attackingDirection,
+      BALL_UP_THE_PITCH,
+    );
+    assert.ok(
+      Math.hypot(player.position.x - target.x, player.position.y - target.y) <
+        STEERING.arrivalRadius,
+      `${player.role.name} stopped short of the home the ball asked for`,
+    );
+  });
 });
 
 test("a match kicks off with the ball on the centre spot", () => {

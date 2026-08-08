@@ -12,6 +12,8 @@ _Reference context — observed facts and standing conventions for this project,
 - A new test is checked by deleting the rule it names in a scratch copy of the module and confirming the test fails. Why: two kick tests passed against a deleted rule. How to apply: on tests written for a rule added in the same session.
 - A rule about ball control is asserted on the event it produces, a touch recorded, not on a distance. Why: the kicked-ball test asserted a gap that the kick cooldown does not control, so it would have passed with the rule deleted.
 - A test waiting for a smoothed value to settle takes its tick count from the tuning constant, e.g. 10 × `CAMERA.smoothingSeconds`. Why: 600 fixed ticks left 0.025 m of a 22 m camera gap against a 0.01 m tolerance, failing three tests from birth.
+- A test fixture that must fall inside a tuning limit is derived from that constant, not written as a literal. Why: a hand-picked ball "inside every band" made the follow-share test fail when the keeper's rein shrank, blaming the wrong rule.
+- Tests that read feel constants are checked against plausible retunes of them, not only against deleted rules. Why: the deleted-rule set passed while a keeper rein cut from 3 m to 1.5 m falsely failed a test of the follow share.
 - The whole mutation set is re-run after a refactor of the code its tests cover. Why: the M2 step 2 refactor renamed a module and changed a helper's signature, and the re-run proved every rule still had a test that fails without it.
 - Scratch copies for mutation runs live outside the repo, e.g. `cp -r web test package.json /tmp/mut/`. Why: `node --test` collects any `*.test.js` in the tree, so probes and copies kept inside the repo are loaded as tests.
 - `SPEC.md` is edited in the same session when a request changes what a step means: M2 step 1's art paragraph was rewritten when kits gained a second colour. Why: a stale step description misleads the next milestone.
@@ -70,9 +72,11 @@ _Reference context — observed facts and standing conventions for this project,
 
 - ✗ A touch that scales the player's velocity by a fixed factor: abandoned. The lead has no equilibrium — it changes by `(f−1)·v·T − ½·a·T²` per touch, so the ball rides the control radius edge and every turn loses it.
 - ✗ A two-zone touch, pushing near the feet and gathering further out: abandoned. The zones are judged on distance alone, so a ball beside or behind the player is also gathered, slows, drifts further behind and is lost.
+- ✗ A 12 m outfield reach with a 6 m keeper reach for the ball-shifted shape: abandoned. The pitch clamp pinned the keeper on its own goal line, and keeper-to-defence spacing fell from 9.45 m to 0.60 m once the ball came 24 m into that half.
 
 ## Open Questions
 
 - ? `BODY.pushRate` is 8, picked without a browser check: a full-speed run still walks through a standing body, and 16 would match run speed. The feel is the user's call.
 - ? Kick-off is not modelled, and both strikers' home places sit 8.0 m from the centre spot, inside the 9.15 m circle, so M3 has to settle what a legal kick-off shape looks like.
 - ? The lost 180° turn is left unfixed by choice at the end of M1: radius 1 with lead 0.8 still loses the ball on a full reversal at top speed, and the ball rolls about 20 m clear.
+- ? The 8 m along-pitch reach lets a team slide 16 m over a 105 m pitch, unjudged in a browser: it may read as stiff, but past about 10 m the defence crowds its own keeper.

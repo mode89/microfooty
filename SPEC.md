@@ -311,7 +311,7 @@ halfway line; the palette map replaces every kit pixel and leaves every other
 colour, including the transparency key, alone; the match state holds one
 control per player.
 
-**Step 2 — Running to a place**
+**[DONE] Step 2 — Running to a place**
 Players run to a fixed formation spot with the M1 movement code, steered
 towards a point instead of by keys, and settle inside an arrival band rather
 than shivering on it. Bodies push each other apart softly, so nobody stacks.
@@ -324,7 +324,7 @@ without oscillation across a long run of ticks; two overlapping players are
 pushed apart by equal and opposite amounts, and the push stops once they stand
 a body apart; a player already inside the band does not move.
 
-**Step 3 — A shape that moves with the ball**
+**[DONE] Step 3 — A shape that moves with the ball**
 Each role's home position is now its formation place shifted by the ball,
 clamped to the pitch and to the role's own band, so a team slides up and down
 as one and keeps its lines.

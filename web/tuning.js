@@ -61,6 +61,21 @@ export const STEERING = Object.freeze({
   slowingDistance: 2,
 });
 
+// A team slides with the ball rather than standing in fixed places. One reach
+// serves all ten outfielders, so they slide as one block and the lines keep
+// their spacing; the keeper is held on a shorter rein. A reach caps a slide
+// either way, and these leave the keeper 0.15 m short of its own goal line, so
+// the pitch clamp in homePosition is a backstop for retuning rather than a rule
+// that fires today.
+export const SHAPE = Object.freeze({
+  alongPitch: Object.freeze({ follow: 0.5, outfieldReach: 8, keeperReach: 3 }),
+  acrossPitch: Object.freeze({
+    follow: 0.25,
+    outfieldReach: 8,
+    keeperReach: 4,
+  }),
+});
+
 // A body gives way at a share of the overlap per second, so a crowd opens over
 // a few ticks rather than snapping apart.
 export const BODY = Object.freeze({

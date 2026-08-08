@@ -19,8 +19,9 @@ import { TEAMS } from "./team.js";
 const KEYBOARD_ROLE = "rightStriker";
 
 export function createMatch(teams = TEAMS) {
+  const ball = createBall();
   const players = teams.flatMap((team) =>
-    team.roles.map((role) => createMatchPlayer(team, role)),
+    team.roles.map((role) => createMatchPlayer(team, role, ball.position)),
   );
   const keyboardIndex = players.findIndex(
     (player) => player.team === teams[0] && player.role.name === KEYBOARD_ROLE,
@@ -28,7 +29,7 @@ export function createMatch(teams = TEAMS) {
   if (keyboardIndex < 0)
     throw new Error(`no ${KEYBOARD_ROLE} for the keyboard to drive`);
 
-  return { players, ball: createBall(), keyboardIndex };
+  return { players, ball, keyboardIndex };
 }
 
 // Everyone runs: the keyboard player on the held keys, the other twenty-one
@@ -41,7 +42,7 @@ export function advanceMatch(match, actions, seconds) {
       player,
       index === match.keyboardIndex
         ? directionFromInput(actions)
-        : directionHome(player),
+        : directionHome(player, match.ball.position),
       seconds,
     ),
   );
@@ -67,12 +68,12 @@ export function keyboardPlayer(match) {
 
 // A player on the pitch is the M1 player plus the side and role they play and
 // how they stand with the ball. Everyone starts facing the goal they attack.
-function createMatchPlayer(team, role) {
+function createMatchPlayer(team, role, ballPosition) {
   return {
     team,
     role,
     ...createPlayer(
-      homePosition(role, team.attackingDirection),
+      homePosition(role, team.attackingDirection, ballPosition),
       team.attackingDirection === DOWN_THE_PITCH ? "down" : "up",
     ),
     control: createControl(),
@@ -94,12 +95,12 @@ function runPlayer(player, direction, seconds) {
   };
 }
 
-// The place a role stands is fixed in this step; step 3 shifts it with the
-// ball.
-function directionHome(player) {
+// The place a role stands slides with the ball, so a run home this tick aims at
+// the shape the ball asked for at the end of the last one.
+function directionHome(player, ballPosition) {
   return directionToward(
     player.position,
-    homePosition(player.role, player.team.attackingDirection),
+    homePosition(player.role, player.team.attackingDirection, ballPosition),
   );
 }
 
