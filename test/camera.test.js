@@ -13,6 +13,11 @@ import {
 import { PITCH, PITCH_BOUNDS, PITCH_MARKINGS } from "../web/world/pitch.js";
 
 const TICK = 1 / 60;
+
+// Ten smoothing time constants leave under 0.005% of the gap unclosed, which
+// is far inside the tolerances the settling tests use.
+const SETTLED_TICKS = Math.ceil((10 * CAMERA.smoothingSeconds) / TICK);
+
 function still(position) {
   return { position, velocity: { x: 0, y: 0 } };
 }
@@ -48,7 +53,7 @@ test("the view shows the agreed fraction of the pitch width", () => {
 test("the camera converges on a stationary target without overshooting", () => {
   const focus = still({ x: 20, y: 10 });
   let camera = createCamera({ x: 0, y: 0 });
-  for (let i = 0; i < 600; i += 1) {
+  for (let i = 0; i < SETTLED_TICKS; i += 1) {
     const next = followCamera(camera, focus, TICK);
     assert.ok(next.centre.x > camera.centre.x - 1e-12);
     assert.ok(next.centre.x <= focus.position.x);
@@ -60,17 +65,27 @@ test("the camera converges on a stationary target without overshooting", () => {
 });
 
 test("lookahead settles ahead of the target, along its travel", () => {
-  const focus = { position: { x: 0, y: 0 }, velocity: { x: 8, y: 0 } };
+  // Slow enough that the lookahead stays short of its cap, which the next test
+  // covers on its own.
+  const travelSpeed = CAMERA.maxLookahead / CAMERA.lookaheadSeconds / 2;
+  const focus = {
+    position: { x: 0, y: 0 },
+    velocity: { x: travelSpeed, y: 0 },
+  };
   let camera = createCamera({ x: 0, y: 0 });
-  for (let i = 0; i < 600; i += 1) camera = followCamera(camera, focus, TICK);
-  assert.ok(Math.abs(camera.centre.x - 8 * CAMERA.lookaheadSeconds) < 0.01);
+  for (let i = 0; i < SETTLED_TICKS; i += 1)
+    camera = followCamera(camera, focus, TICK);
+  assert.ok(
+    Math.abs(camera.centre.x - travelSpeed * CAMERA.lookaheadSeconds) < 0.01,
+  );
   assert.ok(Math.abs(camera.centre.y) < 1e-9);
 });
 
 test("lookahead is capped at its maximum length", () => {
   const focus = { position: { x: 0, y: 0 }, velocity: { x: 0, y: 1000 } };
   let camera = createCamera({ x: 0, y: 0 });
-  for (let i = 0; i < 600; i += 1) camera = followCamera(camera, focus, TICK);
+  for (let i = 0; i < SETTLED_TICKS; i += 1)
+    camera = followCamera(camera, focus, TICK);
   assert.ok(Math.abs(camera.centre.y - CAMERA.maxLookahead) < 0.01);
 });
 

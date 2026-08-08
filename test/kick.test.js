@@ -318,7 +318,9 @@ test("a fresh touch means the player is carrying the ball", () => {
 });
 
 test("a ball crossing faster than the run is deflected, not trapped", () => {
-  const crossingSpeed = 18;
+  // Faster than the run by more than one touch may change, so no touch can
+  // bring it down to the pace of the run.
+  const crossingSpeed = PLAYER.maxSpeed + DRIBBLE.maxTouchSpeedChange + 2;
   const crossing = {
     position: { x: 0, y: 1, z: BALL.radius },
     velocity: { x: 0, y: crossingSpeed, z: 0 },
@@ -509,8 +511,11 @@ test("a player who has kicked the ball away is not carrying it", () => {
   assert.ok(!isCarrying(kicked.control));
 });
 
-test("a struck ball is not dribbled back by the player who kicked it", () => {
+test("a struck pass is not dribbled back by the player who kicked it", () => {
   const down = directionFromInput(keys("down"));
+  // The weakest tap leaves the ball barely faster than the run and is meant to
+  // be run onto; a pass with a charge behind it is played away for good.
+  const passCharge = KICK.maximumCharge / 4;
   // Every phase of the touch cadence, since a kick may land at any point in it.
   for (let phase = 0; phase < 8; phase += 1) {
     const run = dribbleFor(
@@ -518,12 +523,18 @@ test("a struck ball is not dribbled back by the player who kicked it", () => {
       down,
       120 + phase,
     );
-    const passed = holdThenRelease(run.player, run.ball, TICK, run.control);
+    const passed = holdThenRelease(
+      run.player,
+      run.ball,
+      passCharge,
+      run.control,
+    );
     const chase = dribbleFor({ ...passed, player: run.player }, down, 30);
 
-    assert.ok(
-      chase.widestGap > DRIBBLE.controlRadius,
-      `a pass struck at phase ${phase} stayed within ${chase.widestGap.toFixed(2)} m and was dribbled on`,
+    assert.deepEqual(
+      chase.touchTicks,
+      [],
+      `a pass struck at phase ${phase} was touched again and dribbled on`,
     );
   }
 });
