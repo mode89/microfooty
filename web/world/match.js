@@ -1,8 +1,10 @@
 // The whole match in one state: twenty-two players standing in two shapes, one
 // loose ball, and the single player the keyboard drives. Later steps add
 // fields here rather than reshape it.
+import { directionToward } from "../ai/steering.js";
 import { PLAYER, PLAYER_CARRYING } from "../tuning.js";
 import { advanceBall, createBall } from "./ball.js";
+import { partBodies } from "./bodies.js";
 import { homePosition } from "./formation.js";
 import {
   advanceDribble,
@@ -29,18 +31,30 @@ export function createMatch(teams = TEAMS) {
   return { players, ball: createBall(), keyboardIndex };
 }
 
-// Only the keyboard player moves in this step: the other twenty-one stand in
-// their formation places until the AI arrives.
+// Everyone runs: the keyboard player on the held keys, the other twenty-one
+// back to their formation place. Bodies are parted after the runs, so a push
+// cannot be undone by the same tick's movement. Only the keyboard player plays
+// the ball until step 4.
 export function advanceMatch(match, actions, seconds) {
+  const run = match.players.map((player, index) =>
+    runPlayer(
+      player,
+      index === match.keyboardIndex
+        ? directionFromInput(actions)
+        : directionHome(player),
+      seconds,
+    ),
+  );
+  const players = partBodies(run, seconds);
   const played = playBall(
-    runPlayer(keyboardPlayer(match), actions, seconds),
+    players[match.keyboardIndex],
     advanceBall(match.ball, seconds),
     actions.kick,
     seconds,
   );
   return {
     ...match,
-    players: match.players.map((player, index) =>
+    players: players.map((player, index) =>
       index === match.keyboardIndex ? played.player : player,
     ),
     ball: played.ball,
@@ -65,7 +79,7 @@ function createMatchPlayer(team, role) {
   };
 }
 
-function runPlayer(player, actions, seconds) {
+function runPlayer(player, direction, seconds) {
   // Set by the previous tick's touch: this tick's touch needs the player to
   // have moved first.
   const carrying = isCarrying(player.control);
@@ -73,11 +87,20 @@ function runPlayer(player, actions, seconds) {
     ...player,
     ...advancePlayer(
       player,
-      directionFromInput(actions),
+      direction,
       seconds,
       carrying ? PLAYER_CARRYING : PLAYER,
     ),
   };
+}
+
+// The place a role stands is fixed in this step; step 3 shifts it with the
+// ball.
+function directionHome(player) {
+  return directionToward(
+    player.position,
+    homePosition(player.role, player.team.attackingDirection),
+  );
 }
 
 function playBall(player, ball, kicking, seconds) {

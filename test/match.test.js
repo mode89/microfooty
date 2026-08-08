@@ -7,7 +7,7 @@ import {
 } from "../web/world/match.js";
 import { homePosition } from "../web/world/formation.js";
 import { TEAMS } from "../web/world/team.js";
-import { DRIBBLE, PLAYER } from "../web/tuning.js";
+import { BODY, DRIBBLE, PLAYER, STEERING } from "../web/tuning.js";
 
 const STILL = Object.freeze({
   up: false,
@@ -26,15 +26,25 @@ const TICK = 1 / 60;
 // only way a test can set up a touch.
 const STRIDE_BEHIND_THE_BALL = 0.9;
 
-function standingBehindTheBall(match) {
+// Places named players, keyed by their index in the match, and leaves the rest
+// in their formation.
+function placed(match, positions) {
   return {
     ...match,
     players: match.players.map((player, index) =>
-      index === match.keyboardIndex
-        ? { ...player, position: { x: 0, y: STRIDE_BEHIND_THE_BALL } }
-        : player,
+      index in positions ? { ...player, position: positions[index] } : player,
     ),
   };
+}
+
+function standingBehindTheBall(match) {
+  return placed(match, {
+    [match.keyboardIndex]: { x: 0, y: STRIDE_BEHIND_THE_BALL },
+  });
+}
+
+function indexOfRole(match, name) {
+  return match.players.findIndex((player) => player.role.name === name);
 }
 
 function play(match, actions, ticks) {
@@ -105,6 +115,41 @@ test("keys move the keyboard player and nobody else", () => {
   });
   assert.ok(
     keyboardPlayer(match).position.y < keyboardPlayer(still).position.y,
+  );
+});
+
+test("a player away from their place runs back to it and settles", () => {
+  const kickedOff = createMatch();
+  const strayIndex = indexOfRole(kickedOff, "keeper");
+  const home = kickedOff.players[strayIndex].position;
+  const stray = placed(kickedOff, {
+    [strayIndex]: { x: home.x + 10, y: home.y },
+  });
+
+  const back = play(stray, STILL, 300).players[strayIndex];
+  assert.ok(
+    Math.hypot(back.position.x - home.x, back.position.y - home.y) <=
+      STEERING.arrivalRadius,
+  );
+  assert.ok(Math.hypot(back.velocity.x, back.velocity.y) < 0.01);
+});
+
+test("bodies are parted inside the match, not only in the module", () => {
+  const kickedOff = createMatch();
+  const stackIndices = ["leftBack", "rightBack"].map((name) =>
+    indexOfRole(kickedOff, name),
+  );
+  const corner = { x: 30, y: 48 };
+  const stacked = placed(kickedOff, {
+    [stackIndices[0]]: corner,
+    [stackIndices[1]]: corner,
+  });
+
+  const parted = advanceMatch(stacked, STILL, TICK).players;
+  const [first, second] = stackIndices.map((index) => parted[index].position);
+  assert.ok(
+    Math.hypot(second.x - first.x, second.y - first.y) >
+      (BODY.diameter / 2) * BODY.pushRate * TICK,
   );
 });
 

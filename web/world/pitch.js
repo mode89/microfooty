@@ -1,6 +1,8 @@
 // The pitch is vertical: +y runs down the screen along its length, towards the
 // bottom goal, and +x runs across its width. The origin is the centre spot.
 // All lengths are metres and follow the standard full-size pitch.
+import { clamp } from "../math/vec.js";
+
 export const PITCH = Object.freeze({
   length: 105,
   width: 68,
@@ -24,6 +26,14 @@ export const PITCH_BOUNDS = Object.freeze({
   minY: -halfLength,
   maxY: halfLength,
 });
+
+// Nothing leaves the field of play in M2: a run and a push both stop here.
+export function keepOnPitch(position, bounds = PITCH_BOUNDS) {
+  return {
+    x: clamp(position.x, bounds.minX, bounds.maxX),
+    y: clamp(position.y, bounds.minY, bounds.maxY),
+  };
+}
 
 const LEFT_SIDE = -1;
 const RIGHT_SIDE = 1;

@@ -53,6 +53,21 @@ export const KICK = Object.freeze({
   maximumElevation: Math.PI / 8,
 });
 
+// Running to a spot: the run eases off inside the slowing distance and ends
+// inside the arrival radius, which is what keeps a standing player still
+// instead of shivering on the spot.
+export const STEERING = Object.freeze({
+  arrivalRadius: 0.3,
+  slowingDistance: 2,
+});
+
+// A body gives way at a share of the overlap per second, so a crowd opens over
+// a few ticks rather than snapping apart.
+export const BODY = Object.freeze({
+  diameter: 1,
+  pushRate: 8,
+});
+
 export const VISIBLE_PITCH_WIDTH_FRACTION = 0.9;
 
 export const CAMERA = Object.freeze({

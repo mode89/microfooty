@@ -1,6 +1,6 @@
-import { add, clamp, length, scale, subtract } from "../math/vec.js";
+import { add, length, scale, subtract } from "../math/vec.js";
 import { PLAYER } from "../tuning.js";
-import { PITCH_BOUNDS } from "./pitch.js";
+import { keepOnPitch, PITCH_BOUNDS } from "./pitch.js";
 
 const FACING_DIRECTIONS = Object.freeze({
   up: { x: 0, y: -1 },
@@ -26,11 +26,12 @@ export function advancePlayer(
 ) {
   const velocity = steer(player.velocity, direction, seconds, settings);
   const moved = add(player.position, scale(velocity, seconds));
-  const x = resolveAxis(moved.x, velocity.x, bounds.minX, bounds.maxX);
-  const y = resolveAxis(moved.y, velocity.y, bounds.minY, bounds.maxY);
   return {
-    position: { x: x.position, y: y.position },
-    velocity: { x: x.velocity, y: y.velocity },
+    position: keepOnPitch(moved, bounds),
+    velocity: {
+      x: stoppedAtTheLine(moved.x, velocity.x, bounds.minX, bounds.maxX),
+      y: stoppedAtTheLine(moved.y, velocity.y, bounds.minY, bounds.maxY),
+    },
     facing: chooseFacing(player.facing, direction, settings),
   };
 }
@@ -87,12 +88,11 @@ function steer(velocity, direction, seconds, settings) {
     : add(velocity, scale(change, step / size));
 }
 
-function resolveAxis(position, velocity, minimum, maximum) {
+// Running into the touchline kills the speed into it, so a player held there
+// does not shoot off when the line is left behind.
+function stoppedAtTheLine(position, velocity, minimum, maximum) {
   const blockedOutward =
     (position < minimum && velocity < 0) ||
     (position > maximum && velocity > 0);
-  return {
-    position: clamp(position, minimum, maximum),
-    velocity: blockedOutward ? 0 : velocity,
-  };
+  return blockedOutward ? 0 : velocity;
 }
