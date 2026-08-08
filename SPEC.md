@@ -125,7 +125,7 @@ test/
 
 ### 9.3 Steps
 
-**Step 1 — Canvas shell and fixed-timestep loop**
+**[DONE] Step 1 — Canvas shell and fixed-timestep loop**
 Full-window canvas that survives resizing and high-DPI displays. Loop runs
 simulation at a fixed 60 Hz and renders with an interpolation factor between the
 previous and current simulation state. Keyboard input collected into a plain
@@ -136,7 +136,7 @@ currently held keys. Ticks stay at 60 when the frame rate varies.
 interpolation factor for a given sequence of frame durations, including a long
 stall (it must not spiral).
 
-**Step 2 — Pitch and camera**
+**[DONE] Step 2 — Pitch and camera**
 Pitch drawn in world units with markings: touchlines, goal lines, halfway line,
 centre circle, penalty areas, goal areas, penalty spots and arcs, corner arcs.
 Camera converts world to screen at a fixed zoom given as
@@ -148,7 +148,7 @@ the pitch fills the same fraction of the screen at any window size.
 to a stationary target and never overshoots past a clamp; lookahead offsets in
 the direction of travel; the camera stays inside the pitch bounds margin.
 
-**Step 3 — Ball physics**
+**[DONE] Step 3 — Ball physics**
 Ball state is position `(x, y, z)` and velocity `(vx, vy, vz)`, kept as a
 3-component vector so spin can be added later without reshaping the state.
 Gravity, ground friction, air drag, and bounce with restitution. Drawn for now
@@ -160,7 +160,7 @@ bounces with decreasing height, rolls, and comes to a complete rest.
 restitution factor; a rolling ball stops in finite time and does not creep; the
 trajectory is unchanged when the same time span is split into more ticks.
 
-**Step 4 — Sprite pipeline**
+**[DONE] Step 4 — Sprite pipeline**
 Load `players.png` (24 × 8, three 8 × 8 frames: down, right, up). At load,
 draw each frame into its own offscreen canvas scaled ×8 with nearest-neighbour,
 plus a pre-mirrored left frame. Per-frame drawing then uses smoothing at
@@ -171,7 +171,7 @@ motion shows no wobble or stepping.
 *Tests:* the frame slicer returns the expected source rectangles for a sheet of
 given size and frame count. (Canvas drawing itself is judged by eye.)
 
-**Step 5 — Player movement**
+**[DONE] Step 5 — Player movement**
 One player. 8-directional input, acceleration towards a target velocity, a
 maximum speed, and friction on release. Facing derives from the movement
 direction and maps to the four sprites; upward diagonals pick the up sprite and
@@ -185,7 +185,7 @@ vector is normalised); acceleration and stopping reach the expected speeds after
 a known number of ticks; the direction-to-facing map covers all eight directions;
 facing has hysteresis, so a direction hovering on a boundary does not oscillate.
 
-**Step 6 — Loose-ball dribbling**
+**[DONE] Step 6 — Loose-ball dribbling**
 The ball is never attached to the player. When the ball is inside a control
 radius, is low enough, and the player is running, the player touches it towards
 the place it should hold: one lead ahead along the direction of the run, not the
@@ -207,7 +207,7 @@ cooldown apart, and a sharp turn brings one sooner while a gentle drift does
 not; a run onto a loose ball, a straight dribble and a corner each keep the ball
 inside the control radius.
 
-**Step 7 — Tap and hold kick**
+**[DONE] Step 7 — Tap and hold kick**
 One kick button. Charge builds while held, capped at a maximum. Release kicks
 with power interpolated from the charge: a tap gives a low flat pass, a full
 hold gives a fast rising shot. Launch angle rises with power. The kick fires
@@ -218,7 +218,7 @@ of the pitch; charging with no ball nearby wastes the charge without error.
 minimum power; power and launch angle are monotonic in charge duration; releasing
 out of range leaves the ball untouched.
 
-**Step 8 — Feel pass and cleanup**
+**[DONE] Step 8 — Feel pass and cleanup**
 Tune constants: player speed, acceleration, control radius, touch strength,
 friction, restitution, kick power range, camera smoothing and lookahead. Collect
 them into one named constants module so tuning is a single place. Remove debug
@@ -289,7 +289,7 @@ web/
 
 ### 10.3 Steps
 
-**Step 1 — Two teams standing on the pitch**
+**[DONE] Step 1 — Two teams standing on the pitch**
 Team data for two fictional sides: name, kit colours, attacking direction, and
 a 4-4-2 of eleven named roles given as fractions of the pitch, so one formation
 serves both ends by mirroring. Kits are palette swaps of the same three frames,
