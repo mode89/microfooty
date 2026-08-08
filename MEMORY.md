@@ -21,6 +21,7 @@ _Reference context — observed facts and standing conventions for this project,
 - `node --test` collects any file whose name matches `*-test.js`, `*_test.js` or `*.test.js` anywhere in the project, `web/` included, and then fails on browser globals. Browser-only demo pages avoid those name shapes.
 - `web/sprite-demo.html` carries its whole module inline in a `<script type="module">`, so ESLint, which reads `.js` files only, never checks it.
 - The peak player-to-ball gap in a turn is about `idealLead + maxSpeed × touchCooldown / 2`; the ball is kept while that stays under `controlRadius`. The estimate matched every measured combination of the three.
+- A full reversal at top speed peaks at about `idealLead` + 0.30 m: measured 0.90 m at lead 0.6, 1.00 m at radius 1.2 with lead 0.7, 1.10 m at radius 1.4 with lead 0.8. A 90° turn peaks about 0.11 m over the lead.
 - With a touch capped to a multiple of the run speed, a 180° turn keeps the ball only while `controlRadius` exceeds `idealLead` by about 0.4 m. At radius 1 and lead 0.8 a full reversal at top speed loses it.
 - A 180° turn cannot keep the ball while `minimumRunSpeed` is above about 0.4 m/s: the run passes through near-zero speed mid-reversal, no touch is allowed, and the ball rolls 20 m clear.
 - The sharp-turn touch pulls the ball from 0.79 m to 0.24 m in front of the feet when direction changes come fast: touches arrive sooner than the cooldown while each still aims one cooldown ahead.
@@ -33,6 +34,7 @@ _Reference context — observed facts and standing conventions for this project,
 
 - Prettier owns code style and `eslint-config-prettier` switches ESLint's style rules off. Why: two tools formatting the same files disagree, and Prettier rewraps long lines, which `@stylistic/eslint-plugin` (installed, then removed) cannot do.
 - Prettier ignores `*.md`. Why: reformatting the SPEC.md prose changed 48 lines and would bury real edits in review.
+- The camera follows the ball, not the player. Why: the M1 acceptance in `SPEC.md` asks for it. Cost: a resting ball holds the camera still, so the player can run out of the roughly 61 × 34 m view.
 - The ball is drawn at twice its real 0.11 m radius, and neither the ball nor its shadow changes size with height. Why: at the 90% zoom the true size is a 3 px dot, and a fixed size leaves the ball-to-shadow gap as the single height cue.
 - M1 step 3 draws the ball as a plain circle and step 4 introduces sprites. Why: separates "is the physics right" from "does the art pipeline work", so a failed review has one obvious cause.
 - M1 uses the real sprites rather than placeholder shapes. Why: validates the continuous-presentation look early instead of deferring the risk to M4.
@@ -41,6 +43,8 @@ _Reference context — observed facts and standing conventions for this project,
 - A player's position is the point where the feet stand, as the ball's position is its point on the ground. Why: one ground-level meaning for both keeps player-to-ball distance honest for dribbling and tackling.
 - A touch aims the ball to arrive exactly as the next touch falls due, so no separate reach-time constant exists. Why: measured the best turn safety; at twice the cooldown a 90° turn holds but a 180° reversal is lost.
 - `web/world/kick.js` keeps one control state (cooldown, heading, charge, aim) for both touching and kicking. Why: a kick starts the touch cooldown, so two states had to be threaded through both advance calls and returned together.
+- Maximum kick power stays 24 m/s, which carries 63 m of the 105 m pitch, although step 7 of `SPEC.md` asks for "most of the pitch". Why: picked over 28 m/s (83 m) and 32 m/s (104 m).
+- The Shift "tackle" binding is gone from `web/input.js` because the plan is single-button controls, while section 3.2 of `SPEC.md` still names a second button for the slide tackle.
 - `PLAYER_CARRYING`'s 10% pace penalty is a feel choice, not ball control. Why: the touch aims at the player's own velocity, so a slower run pushes a slower ball — turn peaks were identical at 1.0, 0.9, 0.85 and 0.8 of top speed.
 
 ## Dead Ends
@@ -50,4 +54,4 @@ _Reference context — observed facts and standing conventions for this project,
 
 ## Open Questions
 
-- ? Whether the lost 180° turn is fixed by lowering `idealLead` to 0.5 or raising `controlRadius` to 1.4 is undecided; the current constants (radius 1, lead 0.8) lose the ball on a full reversal.
+- ? The lost 180° turn is left unfixed by choice at the end of M1: radius 1 with lead 0.8 still loses the ball on a full reversal at top speed, and the ball rolls about 20 m clear.

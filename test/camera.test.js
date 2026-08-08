@@ -1,9 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
+import { CAMERA, VISIBLE_PITCH_WIDTH_FRACTION } from "../web/tuning.js";
 import {
-  CAMERA,
-  VISIBLE_PITCH_WIDTH_FRACTION,
   clampCamera,
   createCamera,
   createView,

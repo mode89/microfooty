@@ -7,9 +7,8 @@ import {
   createControl,
   isCarrying,
 } from "./world/kick.js";
+import { PLAYER, PLAYER_CARRYING } from "./tuning.js";
 import {
-  PLAYER,
-  PLAYER_CARRYING,
   advancePlayer,
   createPlayer,
   directionFromInput,
@@ -85,12 +84,9 @@ function tick(seconds) {
   ));
 
   previousCamera = camera;
+  // The vector helpers read x and y only, so the ball's height never moves the camera.
   camera = clampCamera(
-    followCamera(
-      camera,
-      { position: player.position, velocity: player.velocity },
-      seconds,
-    ),
+    followCamera(camera, ball, seconds),
     viewOfCamera(camera),
   );
   debug.recordTick();

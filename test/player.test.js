@@ -1,12 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { PLAYER, PLAYER_CARRYING } from "../web/tuning.js";
 import {
   advancePlayer,
   chooseFacing,
   createPlayer,
   directionFromInput,
-  PLAYER,
-  PLAYER_CARRYING,
 } from "../web/world/player.js";
 
 const TICK = 1 / 60;

@@ -1,15 +1,6 @@
-const EPSILON = 1e-9;
+import { BALL } from "../tuning.js";
 
-export const BALL = Object.freeze({
-  radius: 0.11,
-  gravity: 9.81,
-  airDrag: 0.12,
-  rollingDeceleration: 3.2,
-  restitution: 0.55,
-  bounceHorizontalRetention: 0.8,
-  rollingStopSpeed: 0.08,
-  minimumBounceImpactSpeed: 0.7,
-});
+const EPSILON = 1e-9;
 
 export function createBall(position = { x: 0, y: 0 }, settings = BALL) {
   return {

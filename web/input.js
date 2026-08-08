@@ -8,8 +8,6 @@ const KEY_BINDINGS = {
   KeyA: "left",
   KeyD: "right",
   Space: "kick",
-  ShiftLeft: "tackle",
-  ShiftRight: "tackle",
   F1: "debug",
 };
 
@@ -19,7 +17,6 @@ const EMPTY_INPUT = Object.freeze({
   left: false,
   right: false,
   kick: false,
-  tackle: false,
   debug: false,
 });
 

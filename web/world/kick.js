@@ -3,32 +3,8 @@
 // with it again, so a bouncing ball cannot be controlled until it drops and a
 // fast one can be run past and lost.
 import { add, clampLength, dot, length, scale, subtract } from "../math/vec.js";
+import { DRIBBLE, KICK } from "../tuning.js";
 import { launchBall } from "./ball.js";
-
-export const DRIBBLE = Object.freeze({
-  controlRadius: 1,
-  maxTouchHeight: 0.35,
-  minimumRunSpeed: 0.1,
-  touchCooldown: 0.1,
-  sharpTurnAngle: Math.PI / 3,
-  idealLead: 0.8,
-  maxTouchOutrun: 2,
-  maxTouchSpeedChange: 10,
-});
-
-// A kick is charged by holding the button down and struck on release. Power
-// and launch angle both rise with the charge, so a tap is a flat pass and a
-// full hold a rising shot. A kick reaches exactly as far as a touch, so a ball
-// that cannot be dribbled cannot be kicked either.
-export const KICK = Object.freeze({
-  range: DRIBBLE.controlRadius,
-  maximumHeight: DRIBBLE.maxTouchHeight,
-  cooldown: DRIBBLE.touchCooldown,
-  maximumCharge: 0.5,
-  minimumPower: 9,
-  maximumPower: 24,
-  maximumElevation: Math.PI / 8,
-});
 
 // How the player stands with the ball: how long since they last played it and
 // which way they were running when they did, and the kick they are winding up
@@ -133,6 +109,9 @@ function aimedVelocity(player, ball, settings) {
   );
 }
 
+// A kick is charged by holding the button down and struck on release. Power
+// and launch angle both rise with the charge, so a tap is a flat pass and a
+// full hold a rising shot.
 export function advanceKick(
   control,
   player,

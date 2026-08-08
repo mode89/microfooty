@@ -1,15 +1,6 @@
 import { add, clamp, clampLength, scale, subtract } from "../math/vec.js";
-import { PITCH, PITCH_BOUNDS } from "../world/pitch.js";
-
-export const VISIBLE_PITCH_WIDTH_FRACTION = 0.9;
-
-export const CAMERA = Object.freeze({
-  worldUnitsPerScreenWidth: PITCH.width * VISIBLE_PITCH_WIDTH_FRACTION,
-  smoothingSeconds: 0.22,
-  lookaheadSeconds: 0.5,
-  maxLookahead: 10,
-  boundsMargin: 5,
-});
+import { CAMERA } from "../tuning.js";
+import { PITCH_BOUNDS } from "../world/pitch.js";
 
 export function createCamera(centre = { x: 0, y: 0 }) {
   return { centre };

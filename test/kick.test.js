@@ -1,17 +1,14 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { BALL, DRIBBLE, KICK, PLAYER, PLAYER_CARRYING } from "../web/tuning.js";
 import {
-  DRIBBLE,
-  KICK,
   advanceDribble,
   advanceKick,
   createControl,
   isCarrying,
 } from "../web/world/kick.js";
-import { BALL, advanceBall, createBall } from "../web/world/ball.js";
+import { advanceBall, createBall } from "../web/world/ball.js";
 import {
-  PLAYER,
-  PLAYER_CARRYING,
   advancePlayer,
   createPlayer,
   directionFromInput,

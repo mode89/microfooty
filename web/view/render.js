@@ -1,7 +1,7 @@
 import { worldToScreen } from "./camera.js";
 import { drawSprite } from "./sprites.js";
+import { BALL } from "../tuning.js";
 import { PITCH, PITCH_MARKINGS } from "../world/pitch.js";
-import { BALL } from "../world/ball.js";
 
 const GRASS_BANDS = ["#1f6b2c", "#237632"];
 const BAND_COUNT = 14;
