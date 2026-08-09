@@ -8,15 +8,8 @@ import {
 import { homePosition } from "../web/world/formation.js";
 import { TEAMS } from "../web/world/team.js";
 import { BALL, BODY, DRIBBLE, PLAYER, STEERING } from "../web/tuning.js";
+import { STILL } from "./helpers.js";
 
-const STILL = Object.freeze({
-  up: false,
-  down: false,
-  left: false,
-  right: false,
-  kick: false,
-  debug: false,
-});
 const RUNNING_UP = Object.freeze({ ...STILL, up: true });
 const RUNNING_RIGHT = Object.freeze({ ...STILL, right: true });
 const KICKING_UP = Object.freeze({ ...RUNNING_UP, kick: true });

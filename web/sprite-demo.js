@@ -1,4 +1,5 @@
 import { startLoop } from "./loop.js";
+import { fitCanvasToWindow } from "./view/canvas.js";
 import {
   createBallSprite,
   cutPlayerSprites,
@@ -18,10 +19,7 @@ const canvas = document.getElementById("screen");
 const context = canvas.getContext("2d");
 
 function fitToWindow() {
-  const ratio = window.devicePixelRatio || 1;
-  canvas.width = Math.round(canvas.clientWidth * ratio);
-  canvas.height = Math.round(canvas.clientHeight * ratio);
-  context.setTransform(ratio, 0, 0, ratio, 0, 0);
+  fitCanvasToWindow(canvas, context);
 }
 
 window.addEventListener("resize", fitToWindow);

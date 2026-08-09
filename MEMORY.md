@@ -8,7 +8,7 @@ _Reference context — observed facts and standing conventions for this project,
 
 - Test, lint, and format Bash calls are marked `safe: true`. Why: they only read, report, or reformat, so confirmation adds no protection.
 - Gameplay feel constants (control radius, ideal lead, touch period) are the user's to choose, not retuned unasked. Why: measurements cannot rank feel. How to apply: measure options, report them, and apply the user's pick.
-- Numbers from delegated reviews are re-measured before being acted on. Why: two agent reports did not reproduce — a claimed stable 0.61 m dribble lead was really 1.2 m, and a claimed double-turn failure band did not exist at any re-turn delay.
+- Delegated review numbers are re-measured before action. Why: reports of a 0.61 m dribble lead and a double-turn failure band did not reproduce. How to apply: rerun the probe locally before editing.
 - A new test is checked by deleting the rule it names in a scratch copy of the module and confirming the test fails. Why: two kick tests passed against a deleted rule. How to apply: on tests written for a rule added in the same session.
 - One word serves each concept: `heading` for a unit run direction, `frame` for one of the four sprite names, `speed` for pace. Why: a review found `facing`, `heading` and `aim` all naming the same unit vector across three modules.
 - Velocities rebuilt from heading times speed are compared with a tolerance, never with equality. Why: two runs that differ only in a blocked axis take different normalise round-trips, so an exact match is luck rather than a rule.
@@ -34,7 +34,7 @@ _Reference context — observed facts and standing conventions for this project,
 - 22 bodies stacked on one point are still 0.996 m apart after 4000 ticks, and the first tick throws the outermost one 1.4 m, because the pushes of 21 neighbours sum uncapped.
 - The closest pair of formation home positions is 8.4 m apart, so nobody is pushed apart at kick-off.
 - A steering target on or outside the touchline settles still rather than shivering: `advancePlayer` zeroes the velocity on the blocked axis, so the player pins to the line.
-- `web/main.js` and `web/sprite-demo.js` are never loaded by `node --test`, so a renamed export or broken import path in them surfaces only in the browser.
+- `web/main.js`, `web/demo/dribbling.js`, and `web/sprite-demo.js` are not loaded by `node --test`; broken imports in them surface only in the browser.
 - Every frame of `web/players.png` leaves row 0 and row 7 blank, so the body fills six of the eight rows and looks smaller than its 1.4 m draw width suggests.
 - The background of `web/players.png` is solid magenta `(255, 0, 255)`, which is the transparency key rather than a drawn colour.
 - `node --test` collects any file whose name matches `*-test.js`, `*_test.js` or `*.test.js` anywhere in the project, `web/` included, and then fails on browser globals. Browser-only demo pages avoid those name shapes.
@@ -46,9 +46,10 @@ _Reference context — observed facts and standing conventions for this project,
 
 ## Decisions
 
-- Prettier owns code style and `eslint-config-prettier` switches ESLint's style rules off. Why: two tools formatting the same files disagree, and Prettier rewraps long lines, which `@stylistic/eslint-plugin` (installed, then removed) cannot do.
+- Prettier owns style; `eslint-config-prettier` disables ESLint style rules. Why: the tools disagreed, and Prettier wraps long lines that `@stylistic/eslint-plugin` could not.
 - Prettier ignores `*.md`. Why: reformatting the SPEC.md prose changed 48 lines and would bury real edits in review.
 - The camera follows the ball, not the player. Why: the M1 acceptance in `SPEC.md` asks for it. Cost: a resting ball holds the camera still, so the player can run out of the roughly 61 × 34 m view.
+- Presentation owns match and camera snapshots, match advance, interpolation, and draw order. Why: duplicating this temporal policy in two pages left composition mistakes outside the test surface.
 - The ball is drawn at twice its real 0.11 m radius, and neither the ball nor its shadow changes size with height. Why: at the 90% zoom the true size is a 3 px dot, and a fixed size leaves the ball-to-shadow gap as the single height cue.
 - M1 step 3 draws the ball as a plain circle and step 4 introduces sprites. Why: separates "is the physics right" from "does the art pipeline work", so a failed review has one obvious cause.
 - M1 uses the real sprites rather than placeholder shapes. Why: validates the continuous-presentation look early instead of deferring the risk to M4.
@@ -62,6 +63,7 @@ _Reference context — observed facts and standing conventions for this project,
 - A player's run is a unit `heading` plus a scalar `speed`, and `velocityOf` rebuilds the vector for the rules that want one. Why: the heading outlives the run, so a player who has stopped still points where they last ran.
 - A kick goes along the player's heading, with no aim state of its own. Why: the heading already persists when stopped, and the aim it replaced was seeded up the pitch, so a player who kicked before ever moving shot at their own goal.
 - Sprite frames depend only on heading in `web/view/frames.js`. Why: the old flicker dead band required prior frame state, which the world no longer stores.
+- Presentation receives a kit sprite catalogue and selects by team and role. Why: this is the sole kit rule, so an injected selector added speculative flexibility.
 - Running onto your own tap counts as dribbling, so the weakest kick is not required to outrun the kicker. Why: the alternative was raising `KICK.minimumPower` from 9 to 11, which lengthens every short pass. The test was changed instead.
 - `KICK.maximumPower` in `web/tuning.js` is 28 m/s, which carries 83 m of the 105 m pitch. Why: picked over 24 m/s (63 m), which leaves less than "most of the pitch" as step 7 of `SPEC.md` asks, and 32 m/s (104 m).
 - Every team's `roles` aliases the single `FORMATION_442`, and the field stays despite the duplication. Why: `SPEC.md` §10.1 makes the formation part of team data, and M2 step 3 gives roles a ball-shifted home.
@@ -72,11 +74,12 @@ _Reference context — observed facts and standing conventions for this project,
 
 - ✗ A touch that scales the player's velocity by a fixed factor: abandoned. The lead has no equilibrium — it changes by `(f−1)·v·T − ½·a·T²` per touch, so the ball rides the control radius edge and every turn loses it.
 - ✗ A two-zone touch, pushing near the feet and gathering further out: abandoned. The zones are judged on distance alone, so a ball beside or behind the player is also gathered, slows, drifts further behind and is lost.
-- ✗ A 12 m outfield reach with a 6 m keeper reach for the ball-shifted shape: abandoned. The pitch clamp pinned the keeper on its own goal line, and keeper-to-defence spacing fell from 9.45 m to 0.60 m once the ball came 24 m into that half.
+- ✗ A 12 m outfield / 6 m keeper shape reach is abandoned. The pitch clamp pinned the keeper to its goal line and cut keeper-defence spacing from 9.45 m to 0.60 m when the ball entered that half.
 
 ## Open Questions
 
 - ? Whether the sprite frame flickers on the 39 degree boundary between the up and side frames now that the dead band is gone: unjudged in a browser.
+- ? The shared presentation and canvas refactor lacks a browser check: match kits and F1 overlay, dribbling readout, sprite demo, and resize remain unjudged.
 
 - ? `BODY.pushRate` is 8, picked without a browser check: a full-speed run still walks through a standing body, and 16 would match run speed. The feel is the user's call.
 - ? Kick-off is not modelled, and both strikers' home places sit 8.0 m from the centre spot, inside the 9.15 m circle, so M3 has to settle what a legal kick-off shape looks like.
