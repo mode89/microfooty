@@ -1,7 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { directionToward } from "../web/ai/steering.js";
-import { advancePlayer, createPlayer, setRun } from "../web/world/player.js";
+import {
+  advancePlayer,
+  createPlayer,
+  setHeadingAndSpeed,
+} from "../web/world/player.js";
 import { STEERING } from "../web/tuning.js";
 
 const TICK = 1 / 60;
@@ -11,7 +15,7 @@ function runTo(player, target, ticks) {
   const track = [];
   for (let tick = 0; tick < ticks; tick += 1) {
     current = advancePlayer(
-      setRun(current, directionToward(current.position, target)),
+      setHeadingAndSpeed(current, directionToward(current.position, target)),
       TICK,
     );
     track.push(current);

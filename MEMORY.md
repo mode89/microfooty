@@ -6,14 +6,14 @@ _Reference context — observed facts and standing conventions for this project,
 
 ## Conventions
 
-- Bash calls that run the test suite, the linter, or the formatter (`node --test`, `npm run lint`, `npm run format`) are marked `safe: true`. Why: they only read the project and report or reformat it, so a confirmation prompt adds no protection.
+- Test, lint, and format Bash calls are marked `safe: true`. Why: they only read, report, or reformat, so confirmation adds no protection.
 - Gameplay feel constants (control radius, ideal lead, touch period) are the user's to choose, not retuned unasked. Why: measurements cannot rank feel. How to apply: measure options, report them, and apply the user's pick.
 - Numbers from delegated reviews are re-measured before being acted on. Why: two agent reports did not reproduce — a claimed stable 0.61 m dribble lead was really 1.2 m, and a claimed double-turn failure band did not exist at any re-turn delay.
 - A new test is checked by deleting the rule it names in a scratch copy of the module and confirming the test fails. Why: two kick tests passed against a deleted rule. How to apply: on tests written for a rule added in the same session.
 - One word serves each concept: `heading` for a unit run direction, `frame` for one of the four sprite names, `speed` for pace. Why: a review found `facing`, `heading` and `aim` all naming the same unit vector across three modules.
 - Velocities rebuilt from heading times speed are compared with a tolerance, never with equality. Why: two runs that differ only in a blocked axis take different normalise round-trips, so an exact match is luck rather than a rule.
 - A rule about ball control is asserted on the event it produces, a touch recorded, not on a distance. Why: a kicked-ball test asserted a gap that the touch timer does not control, so it passed with the rule deleted.
-- A test waiting for a smoothed value to settle takes its tick count from the tuning constant, e.g. 10 × `CAMERA.smoothingSeconds`. Why: 600 fixed ticks left 0.025 m of a 22 m camera gap against a 0.01 m tolerance, failing three tests from birth.
+- Camera settling tests derive their tick count from tuning, e.g. 10 × `CAMERA.smoothingSeconds`. Why: 600 fixed ticks once missed a 0.01 m tolerance.
 - A test fixture that must fall inside a tuning limit is derived from that constant, not written as a literal. Why: a hand-picked ball "inside every band" made the follow-share test fail when the keeper's rein shrank, blaming the wrong rule.
 - Tests that read feel constants are checked against plausible retunes of them, not only against deleted rules. Why: the deleted-rule set passed while a keeper rein cut from 3 m to 1.5 m falsely failed a test of the follow share.
 - The whole mutation set is re-run after a refactor of the code its tests cover. Why: the M2 step 2 refactor renamed a module and changed a helper's signature, and the re-run proved every rule still had a test that fails without it.
@@ -57,9 +57,11 @@ _Reference context — observed facts and standing conventions for this project,
 - A player's position is the point where the feet stand, as the ball's position is its point on the ground. Why: one ground-level meaning for both keeps player-to-ball distance honest for dribbling and tackling.
 - Instant starts, stops and turns with 3 Hz touches are browser-approved. Why: the user accepted the arcade dribbling feel without acceleration or braking.
 - A low fast ball is controlled by replacing its horizontal velocity. Why: the user accepted the arcade interception behavior; no velocity-change cap is wanted.
+- Possession is one deep in-process module with no adapter. Why: one implementation makes another seam hypothetical, while one module keeps touch and kick order local.
+- A new toucher calculates its first touch at full pace, then moves at carrying pace. Why: this preserves the accepted dribble lead; carrying pace would shorten the touch.
 - A player's run is a unit `heading` plus a scalar `speed`, and `velocityOf` rebuilds the vector for the rules that want one. Why: the heading outlives the run, so a player who has stopped still points where they last ran.
 - A kick goes along the player's heading, with no aim state of its own. Why: the heading already persists when stopped, and the aim it replaced was seeded up the pitch, so a player who kicked before ever moving shot at their own goal.
-- The four sprite frames are picked from the heading angle alone, in `web/view/frames.js`. Why: the sticky dead band that stopped frame flicker needed the previously drawn frame, which the world no longer holds now that the heading is continuous.
+- Sprite frames depend only on heading in `web/view/frames.js`. Why: the old flicker dead band required prior frame state, which the world no longer stores.
 - Running onto your own tap counts as dribbling, so the weakest kick is not required to outrun the kicker. Why: the alternative was raising `KICK.minimumPower` from 9 to 11, which lengthens every short pass. The test was changed instead.
 - `KICK.maximumPower` in `web/tuning.js` is 28 m/s, which carries 83 m of the 105 m pitch. Why: picked over 24 m/s (63 m), which leaves less than "most of the pitch" as step 7 of `SPEC.md` asks, and 32 m/s (104 m).
 - Every team's `roles` aliases the single `FORMATION_442`, and the field stays despite the duplication. Why: `SPEC.md` §10.1 makes the formation part of team data, and M2 step 3 gives roles a ball-shifted home.
@@ -80,3 +82,11 @@ _Reference context — observed facts and standing conventions for this project,
 - ? Kick-off is not modelled, and both strikers' home places sit 8.0 m from the centre spot, inside the 9.15 m circle, so M3 has to settle what a legal kick-off shape looks like.
 - ? Per-player 3 Hz timers permit an aggregate touch every tick in a crowd; whether this looks too busy in team play is unjudged.
 - ? The 8 m along-pitch reach lets a team slide 16 m over a 105 m pitch, unjudged in a browser: it may read as stiff, but past about 10 m the defence crowds its own keeper.
+
+# Extra
+
+## Glossary
+
+This glossary records project terms whose local meaning is easy to mistake. Entries change when the shared domain language changes.
+
+- **Possession**: Loose-ball play handled by the Possession module. It is not stored ownership; the ball stays loose, and possession emerges from touches.

@@ -22,7 +22,7 @@ export function velocityOf(player) {
   return scale(player.heading, player.speed);
 }
 
-export function setRun(player, direction, settings = PLAYER) {
+export function setHeadingAndSpeed(player, direction, settings = PLAYER) {
   const velocity = scale(direction, settings.maxSpeed);
   const speed = length(velocity);
   return {

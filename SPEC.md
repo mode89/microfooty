@@ -115,7 +115,8 @@ web/
   world/pitch.js   pitch dimensions and markings data
   world/ball.js    ball state + physics (pure)
   world/player.js  player state + movement (pure)
-  world/kick.js    kick and dribble rules (pure)
+  world/possession.js  loose-ball play; possession emerges from touches and is
+                       not stored ownership (pure)
   view/camera.js   camera follow (pure)
   view/sprites.js  offscreen pre-scaling and palette swaps
   view/render.js   draws world to canvas
@@ -271,7 +272,6 @@ web/
   world/formation.js   home position of a role for a given ball position
   world/match.js       the whole match state and one advance step, built at
                        step 1 so later steps add fields instead of reshaping it
-  world/contest.js     which player, if any, plays the ball this tick
   world/tackle.js      the slide: lunge, reach, recovery (pure)
   world/volley.js      automatic strike at an airborne ball (pure)
   world/goal.js        goal frame, post rebounds, goal-line crossing (pure)

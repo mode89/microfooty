@@ -5,7 +5,7 @@ import {
   advancePlayer,
   createPlayer,
   directionFromInput,
-  setRun,
+  setHeadingAndSpeed,
   velocityOf,
 } from "../web/world/player.js";
 import { runAt } from "./helpers.js";
@@ -21,7 +21,10 @@ function keys(...held) {
 function run(player, direction, ticks, settings = PLAYER) {
   let current = player;
   for (let step = 0; step < ticks; step += 1)
-    current = advancePlayer(setRun(current, direction, settings), TICK);
+    current = advancePlayer(
+      setHeadingAndSpeed(current, direction, settings),
+      TICK,
+    );
   return current;
 }
 
@@ -85,7 +88,7 @@ test("a boundary removes only the outward velocity", () => {
   };
   const direction = directionFromInput(keys("right"));
   const bounds = { minX: -1, maxX: 1, minY: -10, maxY: 10 };
-  const running = setRun(player, direction);
+  const running = setHeadingAndSpeed(player, direction);
   const unbounded = advancePlayer(running, TICK, {
     minX: -10,
     maxX: 10,
@@ -106,12 +109,12 @@ test("a player at the boundary can reverse inward immediately", () => {
     ...runAt({ x: PLAYER.maxSpeed, y: 0 }),
   };
   const blocked = advancePlayer(
-    setRun(outward, directionFromInput(keys("right"))),
+    setHeadingAndSpeed(outward, directionFromInput(keys("right"))),
     TICK,
     bounds,
   );
   const reversed = advancePlayer(
-    setRun(blocked, directionFromInput(keys("left"))),
+    setHeadingAndSpeed(blocked, directionFromInput(keys("left"))),
     TICK,
     bounds,
   );
