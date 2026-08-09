@@ -1,12 +1,12 @@
-import { startLoop } from "./loop.js";
-import { fitCanvasToWindow } from "./view/canvas.js";
+import { startLoop } from "../loop.js";
+import { fitCanvasToWindow } from "../view/canvas.js";
 import {
   createBallSprite,
   cutPlayerSprites,
   drawSprite,
   loadPlayerSheet,
   SHEET_FRAMES,
-} from "./view/sprites.js";
+} from "../view/sprites.js";
 
 const FRAMES = [...SHEET_FRAMES, "left"];
 const SPRITE_SIZE = 96;
@@ -25,7 +25,7 @@ function fitToWindow() {
 window.addEventListener("resize", fitToWindow);
 fitToWindow();
 
-const sprites = cutPlayerSprites(await loadPlayerSheet("./players.png"));
+const sprites = cutPlayerSprites(await loadPlayerSheet("../players.png"));
 const ballSprite = createBallSprite();
 
 let previousTravelDistance = 0;
