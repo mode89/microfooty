@@ -83,7 +83,7 @@ _Reference context — observed facts and standing conventions for this project,
 
 - ? `BODY.pushRate` is 8, picked without a browser check: a full-speed run still walks through a standing body, and 16 would match run speed. The feel is the user's call.
 - ? Kick-off is not modelled, and both strikers' home places sit 8.0 m from the centre spot, inside the 9.15 m circle, so M3 has to settle what a legal kick-off shape looks like.
-- ? Per-player 3 Hz timers permit an aggregate touch every tick in a crowd; whether this looks too busy in team play is unjudged.
+- ? M2 step 4 lacks a browser review: nearest-player chases, AI carrying, and aggregate crowd touches are test-approved, but their play feel is unjudged.
 - ? The 8 m along-pitch reach lets a team slide 16 m over a 105 m pitch, unjudged in a browser: it may read as stiff, but past about 10 m the defence crowds its own keeper.
 
 # Extra

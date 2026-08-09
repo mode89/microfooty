@@ -33,11 +33,16 @@ export function createMatch(teams = TEAMS) {
 
 export function advanceMatch(match, actions, seconds) {
   const keyboardDirection = directionFromInput(actions);
-  const directions = match.players.map((player, index) =>
-    index === match.keyboardIndex
-      ? keyboardDirection
-      : directionHome(player, match.ball.position),
+  const nearestToBallIndexes = nearestPlayerIndexesByTeam(
+    match.players,
+    match.ball.position,
   );
+  const directions = match.players.map((player, index) => {
+    if (index === match.keyboardIndex) return keyboardDirection;
+    if (nearestToBallIndexes.has(index))
+      return directionToward(player.position, match.ball.position);
+    return directionHome(player, match.ball.position);
+  });
   const possession = advancePossession(
     {
       players: match.players,
@@ -93,6 +98,20 @@ function attackingHeading(team) {
 
 function directionChanged(before, after) {
   return before.x !== after.x || before.y !== after.y;
+}
+
+function nearestPlayerIndexesByTeam(players, ballPosition) {
+  const nearestByTeam = new Map();
+  players.forEach((player, index) => {
+    const gap = Math.hypot(
+      ballPosition.x - player.position.x,
+      ballPosition.y - player.position.y,
+    );
+    const nearest = nearestByTeam.get(player.team);
+    if (!nearest || gap < nearest.gap)
+      nearestByTeam.set(player.team, { index, gap });
+  });
+  return new Set([...nearestByTeam.values()].map(({ index }) => index));
 }
 
 function directionHome(player, ballPosition) {

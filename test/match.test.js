@@ -5,7 +5,10 @@ import {
   createMatch,
   keyboardPlayer,
 } from "../web/world/match.js";
+import { advanceBall } from "../web/world/ball.js";
 import { homePosition } from "../web/world/formation.js";
+import { advancePlayer, directionFromInput } from "../web/world/player.js";
+import { advancePossession } from "../web/world/possession.js";
 import { TEAMS } from "../web/world/team.js";
 import { BALL, BODY, DRIBBLE, PLAYER, STEERING } from "../web/tuning.js";
 import { STILL } from "./helpers.js";
@@ -66,8 +69,28 @@ function withBallAt(match, { x, y }) {
   };
 }
 
+function withBallUntouchableFor(match, ticks) {
+  const fall = 0.5 * BALL.gravity * (ticks * TICK) ** 2;
+  return {
+    ...match,
+    ball: {
+      ...match.ball,
+      position: {
+        ...match.ball.position,
+        z: DRIBBLE.maxTouchHeight + fall + 1,
+      },
+    },
+  };
+}
+
 function indexOfRole(match, name) {
   return match.players.findIndex((player) => player.role.name === name);
+}
+
+function indexOfTeamRole(match, team, name) {
+  return match.players.findIndex(
+    (player) => player.team === team && player.role.name === name,
+  );
 }
 
 function play(match, actions, ticks) {
@@ -75,6 +98,42 @@ function play(match, actions, ticks) {
   for (let tick = 0; tick < ticks; tick += 1)
     current = advanceMatch(current, actions, TICK);
   return current;
+}
+
+function groundGap(player, ball) {
+  return Math.hypot(
+    ball.position.x - player.position.x,
+    ball.position.y - player.position.y,
+  );
+}
+
+function advanceSoloMatchWithoutChasing(match, actions, seconds) {
+  const direction = directionFromInput(actions);
+  const possession = advancePossession(
+    {
+      players: match.players,
+      ball: match.ball,
+      recentToucherIndex: match.recentToucherIndex,
+    },
+    {
+      directions: [direction],
+      earlyToucherIndex:
+        match.keyboardDirection.x !== direction.x ||
+        match.keyboardDirection.y !== direction.y
+          ? 0
+          : null,
+      kickingPlayerIndex: 0,
+      kickHeld: actions.kick,
+    },
+    seconds,
+  );
+  return {
+    ...match,
+    players: [advancePlayer(possession.players[0], seconds)],
+    ball: advanceBall(possession.ball, seconds),
+    keyboardDirection: direction,
+    recentToucherIndex: possession.recentToucherIndex,
+  };
 }
 
 function groundSpeed({ velocity }) {
@@ -230,11 +289,21 @@ test("every player starts on the home place of their role", () => {
   );
 });
 
-test("a standing player runs to the home the ball asks for, not the kick-off one", () => {
-  const match = createMatch();
-  const moved = play(withBallAt(match, BALL_UP_THE_PITCH), STILL, 120);
+test("players outside the chase run to the home the ball asks for", () => {
+  const runHomeTicks = 120;
+  const ballShifted = withBallAt(createMatch(), BALL_UP_THE_PITCH);
+  const [firstChaserIndex, secondChaserIndex] = TEAMS.map((team) =>
+    indexOfTeamRole(ballShifted, team, "leftStriker"),
+  );
+  const chaserIndexes = new Set([firstChaserIndex, secondChaserIndex]);
+  const withNamedChasers = placed(ballShifted, {
+    [firstChaserIndex]: { x: -1, y: BALL_UP_THE_PITCH.y },
+    [secondChaserIndex]: { x: 1, y: BALL_UP_THE_PITCH.y },
+  });
+  const shifted = withBallUntouchableFor(withNamedChasers, runHomeTicks);
+  const moved = play(shifted, STILL, runHomeTicks);
   moved.players.forEach((player, index) => {
-    if (index === match.keyboardIndex) return;
+    if (index === shifted.keyboardIndex || chaserIndexes.has(index)) return;
     const target = homePosition(
       player.role,
       player.team.attackingDirection,
@@ -267,16 +336,66 @@ test("a shape without the keyboard's role is refused", () => {
   assert.throws(() => createMatch(keeperOnly), /keyboard/);
 });
 
-test("keys move the keyboard player and nobody else", () => {
-  const match = advanceMatch(createMatch(), RUNNING_UP, 0.1);
-  const still = createMatch();
-  match.players.forEach((player, index) => {
-    if (index === match.keyboardIndex) return;
-    assert.deepEqual(player.position, still.players[index].position);
-  });
-  assert.ok(
-    keyboardPlayer(match).position.y < keyboardPlayer(still).position.y,
+test("the nearest player from each team chases the loose ball", () => {
+  const created = createMatch();
+  const chaserIndexes = TEAMS.map((team) =>
+    indexOfTeamRole(created, team, "leftStriker"),
   );
+  const nonChaserIndexes = TEAMS.map((team) =>
+    indexOfTeamRole(created, team, "leftCentreBack"),
+  );
+  const chaseTicks = 1;
+  const match = withBallUntouchableFor(
+    placed(created, {
+      [chaserIndexes[0]]: { x: 0, y: 2 },
+      [chaserIndexes[1]]: { x: 0, y: -2 },
+    }),
+    chaseTicks,
+  );
+  const after = play(match, STILL, chaseTicks);
+
+  chaserIndexes.forEach((index) =>
+    assert.ok(
+      groundGap(after.players[index], match.ball) <
+        groundGap(match.players[index], match.ball),
+    ),
+  );
+  nonChaserIndexes.forEach((index) =>
+    assert.deepEqual(
+      after.players[index].position,
+      match.players[index].position,
+    ),
+  );
+});
+
+test("keyboard direction overrides the chase", () => {
+  const match = createOnePlayerMatch();
+
+  const after = advanceMatch(match, RUNNING_RIGHT, TICK);
+
+  assert.ok(keyboardPlayer(after).position.x > 0);
+  assert.equal(keyboardPlayer(after).position.y, 0);
+});
+
+test("an AI chaser picks up a loose ball and carries it away", () => {
+  const created = createMatch();
+  const chaser =
+    created.players[indexOfTeamRole(created, TEAMS[1], "rightStriker")];
+  const match = {
+    ...created,
+    players: [
+      { ...keyboardPlayer(created), position: { x: 10, y: 10 } },
+      // Its home is further up, so only chase steering sends it down to the ball.
+      { ...chaser, position: { x: 0, y: -MID_RANGE } },
+    ],
+    keyboardIndex: 0,
+  };
+
+  const after = play(match, STILL, 60);
+
+  assert.equal(after.recentToucherIndex, 1);
+  assert.ok(after.ball.position.y > 1);
+  assert.ok(groundGap(after.players[1], after.ball) <= DRIBBLE.controlRadius);
 });
 
 test("a player away from their place runs back to it and settles", () => {
@@ -286,8 +405,12 @@ test("a player away from their place runs back to it and settles", () => {
   const stray = placed(kickedOff, {
     [strayIndex]: { x: home.x + 10, y: home.y },
   });
-
-  const back = play(stray, STILL, 300).players[strayIndex];
+  const settleTicks = 300;
+  const back = play(
+    withBallUntouchableFor(stray, settleTicks),
+    STILL,
+    settleTicks,
+  ).players[strayIndex];
   assert.ok(
     Math.hypot(back.position.x - home.x, back.position.y - home.y) <=
       STEERING.arrivalRadius,
@@ -314,22 +437,19 @@ test("bodies are parted inside the match, not only in the module", () => {
   );
 });
 
-test("a one-player match dribbles straight and around a corner", () => {
+test("team chase selection leaves a solo M1 dribble unchanged", () => {
   let match = createOnePlayerMatch();
-  let widestGap = 0;
+  let withoutChasing = match;
   for (const actions of [RUNNING_UP, RUNNING_RIGHT])
     for (let tick = 0; tick < 120; tick += 1) {
       match = advanceMatch(match, actions, TICK);
-      const player = keyboardPlayer(match);
-      widestGap = Math.max(
-        widestGap,
-        Math.hypot(
-          match.ball.position.x - player.position.x,
-          match.ball.position.y - player.position.y,
-        ),
+      withoutChasing = advanceSoloMatchWithoutChasing(
+        withoutChasing,
+        actions,
+        TICK,
       );
+      assert.deepEqual(match, withoutChasing);
     }
-  assert.ok(widestGap <= DRIBBLE.controlRadius);
   assert.ok(match.ball.position.x > keyboardPlayer(match).position.x);
 });
 

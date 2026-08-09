@@ -331,7 +331,7 @@ than the ball moved itself, and the shape stays inside the pitch; defenders
 stay behind attackers for a named set of ball positions, including both goal
 lines and both corners.
 
-**Step 4 — Everyone can play the ball**
+**[DONE] Step 4 — Everyone can play the ball**
 The M1 touch rules are lifted from one player to twenty-two. Every player has a
 3 Hz timer, but at most one touch happens in a tick: the nearest eligible player
 wins, with ties broken in fixed player order. Only the most recent toucher pays
