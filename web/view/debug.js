@@ -41,8 +41,8 @@ function debugLines(rates, ball, player) {
     `ball position ${vector3(ball.position)}`,
     `ball velocity ${vector3(ball.velocity)}`,
     `player position ${vector2(player.position)}`,
-    `player velocity ${vector2(player.velocity)}`,
-    `player facing ${player.facing}`,
+    `player heading ${vector2(player.heading)}`,
+    `player speed ${player.speed.toFixed(2)}`,
   ];
 }
 

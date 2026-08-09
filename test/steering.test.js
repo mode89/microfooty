@@ -56,7 +56,7 @@ test("a long run settles inside the band without oscillation", () => {
   const settled = track.at(-1);
 
   assert.ok(distanceTo(settled.position, target) <= STEERING.arrivalRadius);
-  assert.ok(Math.hypot(settled.velocity.x, settled.velocity.y) < 0.01);
+  assert.ok(settled.speed < 0.01);
   assert.ok(
     track.every(({ position }) => position.y >= -STEERING.arrivalRadius),
     "the run passed the target and had to turn back",

@@ -5,6 +5,7 @@
 import { add, clampLength, dot, length, scale, subtract } from "../math/vec.js";
 import { DRIBBLE, KICK } from "../tuning.js";
 import { launchBall } from "./ball.js";
+import { velocityOf } from "./player.js";
 
 // How the player stands with the ball: how long since they last played it and
 // which way they were running when they did, and the kick they are winding up
@@ -12,10 +13,8 @@ import { launchBall } from "./ball.js";
 export function createControl() {
   return {
     cooldown: 0,
-    heading: null,
+    touchHeading: null,
     charge: 0,
-    // Up the pitch, the way the player is drawn at kick-off, until a run aims it.
-    aim: { x: 0, y: -1 },
   };
 }
 
@@ -23,7 +22,7 @@ export function createControl() {
 // kick starts the same cooldown but leaves no heading behind, and a ball that
 // has been kicked away is nobody's to carry.
 export function isCarrying(control) {
-  return control.cooldown > 0 && control.heading !== null;
+  return control.cooldown > 0 && control.touchHeading !== null;
 }
 
 export function advanceDribble(
@@ -41,7 +40,7 @@ export function advanceDribble(
     control: {
       ...cooled,
       cooldown: settings.touchCooldown,
-      heading: headingOf(player),
+      touchHeading: player.heading,
     },
     ball: touch(player, ball, settings),
   };
@@ -49,7 +48,7 @@ export function advanceDribble(
 
 function touchIsDue(control, player, ball, settings) {
   return (
-    length(player.velocity) >= settings.minimumRunSpeed &&
+    player.speed >= settings.minimumRunSpeed &&
     readyAgain(control, player, settings) &&
     ball.position.z <= settings.maxTouchHeight &&
     groundGap(player, ball) <= settings.controlRadius
@@ -63,8 +62,8 @@ function touchIsDue(control, player, ball, settings) {
 function readyAgain(control, player, settings) {
   return (
     control.cooldown === 0 ||
-    (control.heading !== null &&
-      dot(headingOf(player), control.heading) <
+    (control.touchHeading !== null &&
+      dot(player.heading, control.touchHeading) <
         Math.cos(settings.sharpTurnAngle))
   );
 }
@@ -76,7 +75,7 @@ function readyAgain(control, player, settings) {
 function touch(player, ball, settings) {
   const aimed = clampLength(
     aimedVelocity(player, ball, settings),
-    length(player.velocity) * settings.maxTouchOutrun,
+    player.speed * settings.maxTouchOutrun,
   );
   const change = clampLength(
     subtract(aimed, ball.velocity),
@@ -94,24 +93,25 @@ function touch(player, ball, settings) {
 //
 // Aiming at a place rather than a direction is what carries the ball round a
 // turn: it is always steered back in front of the feet instead of rolling on
-// where the run used to point. The drawn facing is not used, since it has four
-// frames and would knock a diagonal run's ball sideways. The ball is aimed to
-// arrive as the next touch falls due, so each touch corrects the whole error
-// it can see and none overshoots the place the following one starts from.
+// where the run used to point. The ball is aimed to arrive as the next touch
+// falls due, so each touch corrects the whole error it can see and none
+// overshoots the place the following one starts from.
 function aimedVelocity(player, ball, settings) {
   const target = add(
     player.position,
-    scale(headingOf(player), settings.idealLead),
+    scale(player.heading, settings.idealLead),
   );
   return add(
-    player.velocity,
+    velocityOf(player),
     scale(subtract(target, ball.position), 1 / settings.touchCooldown),
   );
 }
 
 // A kick is charged by holding the button down and struck on release. Power
 // and launch angle both rise with the charge, so a tap is a flat pass and a
-// full hold a rising shot.
+// full hold a rising shot. It goes along the heading, which outlives the run,
+// so a player who has stopped kicks the way they last ran and one who has
+// never moved kicks the way their team attacks.
 export function advanceKick(
   control,
   player,
@@ -120,18 +120,16 @@ export function advanceKick(
   seconds,
   settings = KICK,
 ) {
-  const aim = aimOf(control, player);
   if (buttonHeld)
     return {
       control: {
         ...control,
-        aim,
         charge: Math.min(control.charge + seconds, settings.maximumCharge),
       },
       ball,
     };
 
-  const released = { ...control, aim, charge: 0 };
+  const released = { ...control, charge: 0 };
   if (control.charge === 0 || !withinKickingRange(player, ball, settings))
     return { control: released, ball };
 
@@ -140,15 +138,9 @@ export function advanceKick(
   // back. It leaves no heading behind, so turning away cannot win the ball
   // back either — a player who kicks up the pitch and runs down must let it go.
   return {
-    control: { ...released, cooldown: settings.cooldown, heading: null },
-    ball: strike(ball, aim, control.charge, settings),
+    control: { ...released, cooldown: settings.cooldown, touchHeading: null },
+    ball: strike(ball, player.heading, control.charge, settings),
   };
-}
-
-// The aim follows the run and outlives it, so a player who has stopped still
-// kicks the way they last ran rather than losing the ball's direction.
-function aimOf(control, player) {
-  return length(player.velocity) === 0 ? control.aim : headingOf(player);
 }
 
 function withinKickingRange(player, ball, settings) {
@@ -158,11 +150,11 @@ function withinKickingRange(player, ball, settings) {
   );
 }
 
-function strike(ball, aim, charge, settings) {
+function strike(ball, heading, charge, settings) {
   const strength = charge / settings.maximumCharge;
   return launchBall(
     ball,
-    Math.atan2(aim.y, aim.x),
+    Math.atan2(heading.y, heading.x),
     strength * settings.maximumElevation,
     settings.minimumPower +
       strength * (settings.maximumPower - settings.minimumPower),
@@ -171,13 +163,6 @@ function strike(ball, aim, charge, settings) {
 
 function groundGap(player, ball) {
   return length(subtract(ball.position, player.position));
-}
-
-// A player who is not moving has no heading. The zero vector keeps the touch
-// defined when settings allow one to be attempted at all.
-function headingOf(player) {
-  const speed = length(player.velocity);
-  return speed === 0 ? { x: 0, y: 0 } : scale(player.velocity, 1 / speed);
 }
 
 // Counting down in tick-sized steps leaves a float remainder rather than

@@ -83,7 +83,7 @@ function drawnPlayers(from, to, alpha) {
         player.position,
         alpha,
       ),
-      facing: player.facing,
+      heading: player.heading,
       sprites: kitSprites[kitOf(player.team, player.role).name],
     }))
     .sort((behind, infront) => behind.position.y - infront.position.y);

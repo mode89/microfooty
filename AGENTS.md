@@ -12,7 +12,8 @@ Browser-based, single-player, top-down arcade football prototype inspired by Sen
 
 ## Commands
 
-- Run tests: `node --test`
+- Run tests: `npm test` (it runs `test/*.test.js`; a bare `node --test` also picks up
+  `test/helpers.js` and reports it as a file with no tests)
 - Lint: `npm run lint`
 - Format: `npm run format` (or `npm run format:check` to verify only)
 - Install the dev tools first: `npm install`

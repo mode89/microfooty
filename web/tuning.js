@@ -7,8 +7,6 @@ export const PLAYER = Object.freeze({
   maxSpeed: 8,
   acceleration: 28,
   braking: 24,
-  diagonalBias: 0.15,
-  facingHysteresis: 0.05,
   carryingSpeedFactor: 0.9,
 });
 

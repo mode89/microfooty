@@ -173,17 +173,18 @@ given size and frame count. (Canvas drawing itself is judged by eye.)
 
 **[DONE] Step 5 — Player movement**
 One player. 8-directional input, acceleration towards a target velocity, a
-maximum speed, and friction on release. Facing derives from the movement
-direction and maps to the four sprites; upward diagonals pick the up sprite and
-downward diagonals the nearest side sprite.
+maximum speed, and friction on release. The run is held as a heading and a
+speed: input against the heading brakes, input with it accelerates. The heading
+maps to the four sprite frames; upward diagonals pick the up frame and downward
+diagonals the nearest side frame.
 Sprites drawn with the slight vertical squash of the Sensi look.
 *Review:* the player runs in all eight directions at a consistent speed, and the
-sprite facing matches the direction without flickering between two facings on
-near-diagonal input.
+sprite frame matches the run, which lags the keys through a turn because the
+heading follows the movement rather than the input.
 *Tests:* diagonal input gives the same top speed as straight input (the input
-vector is normalised); acceleration and stopping reach the expected speeds after
-a known number of ticks; the direction-to-facing map covers all eight directions;
-facing has hysteresis, so a direction hovering on a boundary does not oscillate.
+vector is normalised); acceleration, braking and stopping reach the expected
+speeds after a known number of ticks; the facing-to-sprite map covers all eight
+directions.
 
 **[DONE] Step 6 — Loose-ball dribbling**
 The ball is never attached to the player. When the ball is inside a control

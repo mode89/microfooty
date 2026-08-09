@@ -1,4 +1,5 @@
 import { worldToScreen } from "./camera.js";
+import { spriteFrame } from "./frames.js";
 import { drawSprite } from "./sprites.js";
 import { BALL } from "../tuning.js";
 import { PITCH, PITCH_MARKINGS } from "../world/pitch.js";
@@ -95,7 +96,7 @@ export function renderPlayer(context, view, player, sprites) {
 
   drawSprite(
     context,
-    sprites[player.facing],
+    sprites[spriteFrame(player.heading)],
     { x: feet.x, y: feet.y - heightPixels * (PLAYER_DRAW.feetRow - 0.5) },
     widthPixels,
     heightPixels,

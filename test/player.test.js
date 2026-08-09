@@ -3,10 +3,11 @@ import test from "node:test";
 import { PLAYER, PLAYER_CARRYING } from "../web/tuning.js";
 import {
   advancePlayer,
-  chooseFacing,
   createPlayer,
   directionFromInput,
+  velocityOf,
 } from "../web/world/player.js";
+import { runAt } from "./helpers.js";
 
 const TICK = 1 / 60;
 
@@ -16,22 +17,11 @@ function keys(...held) {
   );
 }
 
-function speed(player) {
-  return Math.hypot(player.velocity.x, player.velocity.y);
-}
-
 function run(player, direction, ticks) {
   let current = player;
   for (let step = 0; step < ticks; step += 1)
     current = advancePlayer(current, direction, TICK);
   return current;
-}
-
-function heading(degrees) {
-  return {
-    x: Math.cos((degrees * Math.PI) / 180),
-    y: -Math.sin((degrees * Math.PI) / 180),
-  };
 }
 
 test("a diagonal run reaches the same top speed as a straight run", () => {
@@ -41,8 +31,8 @@ test("a diagonal run reaches the same top speed as a straight run", () => {
     directionFromInput(keys("right", "up")),
     120,
   );
-  assert.ok(Math.abs(speed(straight) - PLAYER.maxSpeed) < 1e-9);
-  assert.ok(Math.abs(speed(diagonal) - PLAYER.maxSpeed) < 1e-9);
+  assert.ok(Math.abs(straight.speed - PLAYER.maxSpeed) < 1e-9);
+  assert.ok(Math.abs(diagonal.speed - PLAYER.maxSpeed) < 1e-9);
 });
 
 test("no keys held gives a zero direction", () => {
@@ -56,17 +46,29 @@ test("opposite keys cancel", () => {
 test("acceleration reaches the expected speed after a known time", () => {
   const ticks = 6;
   const player = run(createPlayer(), directionFromInput(keys("down")), ticks);
-  assert.ok(
-    Math.abs(speed(player) - PLAYER.acceleration * ticks * TICK) < 1e-9,
-  );
+  assert.ok(Math.abs(player.speed - PLAYER.acceleration * ticks * TICK) < 1e-9);
 });
 
 test("releasing the keys brings the player to a complete stop", () => {
   const running = run(createPlayer(), directionFromInput(keys("down")), 120);
   const ticksToStop = Math.ceil(PLAYER.maxSpeed / PLAYER.braking / TICK);
   const stopped = run(running, directionFromInput(keys()), ticksToStop);
-  assert.equal(speed(stopped), 0);
+  assert.equal(stopped.speed, 0);
   assert.ok(stopped.position.y > running.position.y);
+  assert.ok(
+    Math.hypot(
+      stopped.heading.x - running.heading.x,
+      stopped.heading.y - running.heading.y,
+    ) < 1e-9,
+  );
+});
+
+test("turning back against the run sheds speed at the braking rate", () => {
+  const running = run(createPlayer(), directionFromInput(keys("down")), 120);
+  const turning = run(running, directionFromInput(keys("up")), 1);
+  assert.ok(
+    Math.abs(turning.speed - (PLAYER.maxSpeed - PLAYER.braking * TICK)) < 1e-9,
+  );
 });
 
 test("a player carrying the ball runs slower than one chasing it", () => {
@@ -79,7 +81,7 @@ test("a player carrying the ball runs slower than one chasing it", () => {
         TICK,
         settings,
       );
-    return speed(player);
+    return player.speed;
   }
   const carrying = topSpeedAfter(PLAYER_CARRYING, 120);
   assert.ok(carrying < topSpeedAfter(PLAYER, 120));
@@ -94,8 +96,7 @@ test("the player stays inside the pitch", () => {
 test("a boundary removes only the outward velocity", () => {
   const player = {
     position: { x: 1, y: 0 },
-    velocity: { x: PLAYER.maxSpeed, y: 3 },
-    facing: "right",
+    ...runAt({ x: PLAYER.maxSpeed, y: 3 }),
   };
   const direction = directionFromInput(keys("right"));
   const bounds = { minX: -1, maxX: 1, minY: -10, maxY: 10 };
@@ -107,17 +108,16 @@ test("a boundary removes only the outward velocity", () => {
   });
   const bounded = advancePlayer(player, direction, TICK, PLAYER, bounds);
   assert.equal(bounded.position.x, bounds.maxX);
-  assert.equal(bounded.velocity.x, 0);
+  assert.equal(velocityOf(bounded).x, 0);
   assert.equal(bounded.position.y, unbounded.position.y);
-  assert.equal(bounded.velocity.y, unbounded.velocity.y);
+  assert.ok(Math.abs(velocityOf(bounded).y - velocityOf(unbounded).y) < 1e-9);
 });
 
 test("a player at the boundary can reverse inward immediately", () => {
   const bounds = { minX: -1, maxX: 1, minY: -1, maxY: 1 };
   const outward = {
     position: { x: bounds.maxX, y: 0 },
-    velocity: { x: PLAYER.maxSpeed, y: 0 },
-    facing: "right",
+    ...runAt({ x: PLAYER.maxSpeed, y: 0 }),
   };
   const blocked = advancePlayer(
     outward,
@@ -133,62 +133,27 @@ test("a player at the boundary can reverse inward immediately", () => {
     PLAYER,
     bounds,
   );
-  assert.equal(blocked.velocity.x, 0);
+  assert.equal(blocked.speed, 0);
   assert.ok(reversed.position.x < bounds.maxX);
-  assert.ok(reversed.velocity.x < 0);
+  assert.ok(velocityOf(reversed).x < 0);
 });
 
-test("every one of the eight directions picks a facing", () => {
-  const expected = [
-    [keys("up"), "up"],
-    [keys("down"), "down"],
-    [keys("left"), "left"],
-    [keys("right"), "right"],
-    [keys("up", "left"), "up"],
-    [keys("up", "right"), "up"],
-    [keys("down", "left"), "left"],
-    [keys("down", "right"), "right"],
-  ];
-  expected.forEach(([held, facing]) =>
-    assert.equal(
-      chooseFacing(facing === "down" ? "up" : "down", directionFromInput(held)),
-      facing,
-    ),
+test("the heading follows the run, not the keys", () => {
+  const running = run(createPlayer(), directionFromInput(keys("down")), 120);
+  const turning = run(running, directionFromInput(keys("up")), 1);
+  const reversed = run(running, directionFromInput(keys("up")), 60);
+  assert.deepEqual(running.heading, { x: 0, y: 1 });
+  assert.ok(turning.heading.y > 0);
+  assert.ok(reversed.heading.y < 0);
+});
+
+test("the run is the heading times the speed", () => {
+  const running = run(createPlayer(), directionFromInput(keys("down")), 20);
+  const velocity = velocityOf(running);
+  assert.ok(
+    Math.abs(Math.hypot(running.heading.x, running.heading.y) - 1) < 1e-9,
   );
-});
-
-test("an upward diagonal picks up whatever the player faces now", () => {
-  const upRight = directionFromInput(keys("up", "right"));
-  ["up", "down", "left", "right"].forEach((current) =>
-    assert.equal(chooseFacing(current, upRight), "up"),
-  );
-});
-
-test("a downward diagonal picks the side facing whatever the player faces now", () => {
-  const downRight = directionFromInput(keys("down", "right"));
-  ["up", "down", "left", "right"].forEach((current) =>
-    assert.equal(chooseFacing(current, downRight), "right"),
-  );
-});
-
-test("a direction hovering on a boundary does not flicker", () => {
-  const inside = [38, 39, 40];
-  ["up", "right"].forEach((current) => {
-    const facings = inside.map((degrees) =>
-      chooseFacing(current, heading(degrees)),
-    );
-    assert.deepEqual(
-      facings,
-      facings.map(() => current),
-    );
-  });
-});
-
-test("a direction well past the boundary changes the facing", () => {
-  assert.equal(chooseFacing("right", heading(50)), "up");
-  assert.equal(chooseFacing("up", heading(30)), "right");
-});
-
-test("no direction keeps the current facing", () => {
-  assert.equal(chooseFacing("left", { x: 0, y: 0 }), "left");
+  assert.ok(Math.abs(velocity.y - running.speed) < 1e-9);
+  const standing = velocityOf(createPlayer());
+  assert.equal(Math.hypot(standing.x, standing.y), 0);
 });

@@ -19,6 +19,7 @@ const STILL = Object.freeze({
 });
 const RUNNING_UP = Object.freeze({ ...STILL, up: true });
 const KICKING_UP = Object.freeze({ ...RUNNING_UP, kick: true });
+const KICKING_STILL = Object.freeze({ ...STILL, kick: true });
 const TICK = 1 / 60;
 
 // Stands the keyboard player a stride below the ball on the centre spot, so a
@@ -165,7 +166,7 @@ test("a player away from their place runs back to it and settles", () => {
     Math.hypot(back.position.x - home.x, back.position.y - home.y) <=
       STEERING.arrivalRadius,
   );
-  assert.ok(Math.hypot(back.velocity.x, back.velocity.y) < 0.01);
+  assert.ok(back.speed < 0.01);
 });
 
 test("bodies are parted inside the match, not only in the module", () => {
@@ -204,6 +205,16 @@ test("the keyboard player strikes the ball on releasing the button", () => {
   const struck = advanceMatch(charged, RUNNING_UP, TICK).ball;
   assert.ok(groundSpeed(struck) > PLAYER.maxSpeed);
   assert.ok(struck.velocity.y < 0);
+});
+
+test("a kick by a player who has never run goes the way the team attacks", () => {
+  const charged = play(standingBehindTheBall(createMatch()), KICKING_STILL, 60);
+  const struck = advanceMatch(charged, STILL, TICK).ball;
+  assert.ok(groundSpeed(struck) > PLAYER.maxSpeed);
+  assert.equal(
+    Math.sign(struck.velocity.y),
+    keyboardPlayer(charged).team.attackingDirection,
+  );
 });
 
 test("the ball runs on while nobody plays it", () => {

@@ -4,10 +4,10 @@ import {
   cutPlayerSprites,
   drawSprite,
   loadPlayerSheet,
-  SHEET_FACINGS,
+  SHEET_FRAMES,
 } from "./view/sprites.js";
 
-const FACINGS = [...SHEET_FACINGS, "left"];
+const FRAMES = [...SHEET_FRAMES, "left"];
 const SPRITE_SIZE = 96;
 const BALL_DISPLAY_SIZE = 36;
 const DRIFT_SPEED = 40;
@@ -48,16 +48,16 @@ function render(alpha) {
   context.font = "16px monospace";
   context.textAlign = "center";
   context.textBaseline = "top";
-  FACINGS.forEach((facing, index) => {
-    const x = (width * (index + 1)) / (FACINGS.length + 1);
+  FRAMES.forEach((frame, index) => {
+    const x = (width * (index + 1)) / (FRAMES.length + 1);
     drawSprite(
       context,
-      sprites[facing],
+      sprites[frame],
       { x, y: height / 3 },
       SPRITE_SIZE,
       SPRITE_SIZE,
     );
-    context.fillText(facing, x, height / 3 + SPRITE_SIZE);
+    context.fillText(frame, x, height / 3 + SPRITE_SIZE);
   });
 
   const travelDistance =

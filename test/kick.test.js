@@ -13,6 +13,7 @@ import {
   createPlayer,
   directionFromInput,
 } from "../web/world/player.js";
+import { runAt } from "./helpers.js";
 
 const TICK = 1 / 60;
 
@@ -26,13 +27,17 @@ function keys(...held) {
   );
 }
 
+const DOWN_THE_PITCH = Object.freeze({ x: 0, y: 1 });
+
 // The pitch runs along +y, so a player running "down" heads down the screen
-// and the ball ahead of them is at a larger y.
+// and the ball ahead of them is at a larger y. At speed 0 they stand still,
+// heading down the pitch as they last ran.
 function runningPlayer(speed = PLAYER.maxSpeed) {
-  return {
-    position: { x: 0, y: 0 },
-    velocity: { x: 0, y: speed },
-  };
+  return { position: { x: 0, y: 0 }, heading: DOWN_THE_PITCH, speed };
+}
+
+function playerRunning(velocity) {
+  return { position: { x: 0, y: 0 }, ...runAt(velocity) };
 }
 
 function ballAhead(distance, height = BALL.radius) {
@@ -137,7 +142,7 @@ const CHARGE_PER_TICK = TICK / KICK.maximumCharge;
 test("a touch on a ball at the ideal lead matches the ball to the run", () => {
   const player = runningPlayer();
   const after = afterOneTick(player, ballAhead(DRIBBLE.idealLead));
-  assert.ok(Math.abs(speed(after.ball) - speed(player)) < 1e-9);
+  assert.ok(Math.abs(speed(after.ball) - player.speed) < 1e-9);
   assert.ok(after.ball.velocity.y > 0);
   assert.equal(after.control.cooldown, DRIBBLE.touchCooldown);
 });
@@ -145,7 +150,7 @@ test("a touch on a ball at the ideal lead matches the ball to the run", () => {
 test("a touch on a ball at the feet sends it out ahead of the run", () => {
   const player = runningPlayer();
   const after = afterOneTick(player, ballAhead(DRIBBLE.idealLead / 2));
-  assert.ok(speed(after.ball) > speed(player));
+  assert.ok(speed(after.ball) > player.speed);
   assert.ok(after.ball.velocity.y > 0);
 });
 
@@ -182,8 +187,8 @@ test("a single tick of input does not launch the ball", () => {
   );
   const after = afterOneTick(player, ballAhead(0.15));
   assert.ok(
-    speed(after.ball) <= speed(player) * MOST_A_TOUCH_MAY_OUTRUN,
-    `a ${speed(player).toFixed(2)} m/s nudge sent the ball out at ${speed(after.ball).toFixed(2)} m/s`,
+    speed(after.ball) <= player.speed * MOST_A_TOUCH_MAY_OUTRUN,
+    `a ${player.speed.toFixed(2)} m/s nudge sent the ball out at ${speed(after.ball).toFixed(2)} m/s`,
   );
 });
 
@@ -219,9 +224,9 @@ test("no touch happens below the minimum run speed", () => {
 });
 
 test("a touch from a standstill leaves the ball alone", () => {
-  const standing = { position: { x: 0, y: 0 }, velocity: { x: 0, y: 0 } };
+  const standing = runningPlayer(0);
   const ball = ballAhead(0.3);
-  // The one way to reach a touch with no heading at all.
+  // The one way to reach a touch with no pace at all.
   const settings = { ...DRIBBLE, minimumRunSpeed: 0 };
   const after = advanceDribble(createControl(), standing, ball, TICK, settings);
   assert.deepEqual(after.ball, ball);
@@ -289,7 +294,7 @@ test("a sharp turn earns a touch before the cooldown ends", () => {
 
   const turned = advanceDribble(
     running.control,
-    { position: { x: 0, y: 0 }, velocity: { x: PLAYER.maxSpeed, y: 0 } },
+    playerRunning({ x: PLAYER.maxSpeed, y: 0 }),
     ballAhead(DRIBBLE.idealLead),
     TICK,
   );
@@ -301,10 +306,7 @@ test("a gentle change of direction still waits for the cooldown", () => {
   const running = afterOneTick(runningPlayer(), ballAhead(DRIBBLE.idealLead));
   const drifting = advanceDribble(
     running.control,
-    {
-      position: { x: 0, y: 0 },
-      velocity: { x: PLAYER.maxSpeed * 0.3, y: PLAYER.maxSpeed * 0.95 },
-    },
+    playerRunning({ x: PLAYER.maxSpeed * 0.3, y: PLAYER.maxSpeed * 0.95 }),
     ballAhead(DRIBBLE.idealLead),
     TICK,
   );
@@ -495,12 +497,9 @@ test("a charge released with no ball nearby is spent, not saved", () => {
 });
 
 test("a kick goes the way the player last ran, even after stopping", () => {
-  // Down the pitch, which no unset or zeroed aim can point to by accident.
-  const running = runningPlayer();
-  const ball = ballAhead(0.3);
-
-  const { control } = advanceKick(createControl(), running, ball, false, TICK);
-  const after = holdThenRelease(createPlayer(), ball, 0.2, control);
+  // Down the pitch, which no unset or zeroed heading can point to by accident.
+  const stopped = runningPlayer(0);
+  const after = holdThenRelease(stopped, ballAhead(0.3), 0.2);
   assert.ok(after.ball.velocity.y > 0);
   assert.ok(Math.abs(after.ball.velocity.x) < 1e-9);
 });

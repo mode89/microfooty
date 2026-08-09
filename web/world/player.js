@@ -1,20 +1,25 @@
-import { add, length, scale, subtract } from "../math/vec.js";
+import { add, dot, length, scale, subtract } from "../math/vec.js";
 import { PLAYER } from "../tuning.js";
 import { keepOnPitch, PITCH_BOUNDS } from "./pitch.js";
 
-const FACING_DIRECTIONS = Object.freeze({
-  up: { x: 0, y: -1 },
-  down: { x: 0, y: 1 },
-  left: { x: -1, y: 0 },
-  right: { x: 1, y: 0 },
-});
+const UP_THE_PITCH = Object.freeze({ x: 0, y: -1 });
 
-export function createPlayer(position = { x: 0, y: 0 }, facing = "up") {
+// A run is the way the player heads and the pace they hold along it. The
+// heading is a unit vector that outlives the run, so a player who has stopped
+// still faces the way they last moved.
+export function createPlayer(
+  position = { x: 0, y: 0 },
+  heading = UP_THE_PITCH,
+) {
   return {
     position,
-    velocity: { x: 0, y: 0 },
-    facing,
+    heading,
+    speed: 0,
   };
+}
+
+export function velocityOf(player) {
+  return scale(player.heading, player.speed);
 }
 
 export function advancePlayer(
@@ -24,15 +29,18 @@ export function advancePlayer(
   settings = PLAYER,
   bounds = PITCH_BOUNDS,
 ) {
-  const velocity = steer(player.velocity, direction, seconds, settings);
-  const moved = add(player.position, scale(velocity, seconds));
+  const steered = steer(velocityOf(player), direction, seconds, settings);
+  const moved = add(player.position, scale(steered, seconds));
+  const velocity = {
+    x: stoppedAtTheLine(moved.x, steered.x, bounds.minX, bounds.maxX),
+    y: stoppedAtTheLine(moved.y, steered.y, bounds.minY, bounds.maxY),
+  };
+  const speed = length(velocity);
   return {
     position: keepOnPitch(moved, bounds),
-    velocity: {
-      x: stoppedAtTheLine(moved.x, velocity.x, bounds.minX, bounds.maxX),
-      y: stoppedAtTheLine(moved.y, velocity.y, bounds.minY, bounds.maxY),
-    },
-    facing: chooseFacing(player.facing, direction, settings),
+    // A stopped run has no heading of its own, so it keeps the one it stopped on.
+    heading: speed === 0 ? player.heading : scale(velocity, 1 / speed),
+    speed,
   };
 }
 
@@ -47,41 +55,17 @@ export function directionFromInput(keys) {
   return size === 0 ? held : scale(held, 1 / size);
 }
 
-// Each facing scores how well it lines up with the direction. The favoured
-// facing of the quadrant carries a bias, so a 45 degree diagonal always picks
-// it, and the current facing carries a smaller one, which leaves a dead band
-// around every boundary. The smaller bias is what stops a wobbling diagonal
-// from flickering while still letting the diagonal rule win.
-export function chooseFacing(current, direction, settings = PLAYER) {
-  if (length(direction) === 0) return current;
-  const favoured = favouredFacings(direction);
-  function score(facing) {
-    return (
-      direction.x * FACING_DIRECTIONS[facing].x +
-      direction.y * FACING_DIRECTIONS[facing].y +
-      (favoured.includes(facing) ? settings.diagonalBias : 0) +
-      (facing === current ? settings.facingHysteresis : 0)
-    );
-  }
-  return Object.keys(FACING_DIRECTIONS).reduce((best, facing) =>
-    score(facing) > score(best) ? facing : best,
-  );
-}
-
-// A diagonal that heads up the pitch is drawn with the up frame, which shows
-// the player's back; every other diagonal is drawn with a side frame.
-function favouredFacings(direction) {
-  return direction.y < 0 ? ["up"] : ["left", "right"];
-}
-
 // Moves the velocity towards the target at a fixed rate without overshooting
 // it. A released direction targets zero, which is the friction that stops the
-// player.
+// player. Running against the current velocity brakes, running with it
+// accelerates, so a turn is as sharp as a stop.
 function steer(velocity, direction, seconds, settings) {
   const change = subtract(scale(direction, settings.maxSpeed), velocity);
   const size = length(change);
+  const released = length(direction) === 0;
+  const againstTheRun = dot(direction, velocity) < 0;
   const rate =
-    length(direction) === 0 ? settings.braking : settings.acceleration;
+    released || againstTheRun ? settings.braking : settings.acceleration;
   const step = rate * seconds;
   return size <= step
     ? add(velocity, change)

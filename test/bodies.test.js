@@ -70,11 +70,12 @@ test("a long tick parts bodies without throwing them apart", () => {
 
 test("the push leaves the run untouched", () => {
   const running = standing({ x: -0.2, y: 0 }, { x: 0.2, y: 0 }).map(
-    (player) => ({ ...player, velocity: { x: 3, y: -2 } }),
+    (player) => ({ ...player, heading: { x: 0.6, y: -0.8 }, speed: 3 }),
   );
-  partBodies(running, TICK).forEach((player, index) =>
-    assert.deepEqual(player.velocity, running[index].velocity),
-  );
+  partBodies(running, TICK).forEach((player, index) => {
+    assert.deepEqual(player.heading, running[index].heading);
+    assert.equal(player.speed, running[index].speed);
+  });
 });
 
 test("players on the very same spot part the same way every run", () => {

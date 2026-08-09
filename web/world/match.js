@@ -13,7 +13,6 @@ import {
   isCarrying,
 } from "./kick.js";
 import { advancePlayer, createPlayer, directionFromInput } from "./player.js";
-import { DOWN_THE_PITCH } from "./pitch.js";
 import { TEAMS } from "./team.js";
 
 const KEYBOARD_ROLE = "rightStriker";
@@ -74,10 +73,16 @@ function createMatchPlayer(team, role, ballPosition) {
     role,
     ...createPlayer(
       homePosition(role, team.attackingDirection, ballPosition),
-      team.attackingDirection === DOWN_THE_PITCH ? "down" : "up",
+      attackingHeading(team),
     ),
     control: createControl(),
   };
+}
+
+// A team attacks along the pitch, so its attacking direction is the y of a
+// heading and there is nothing to attack across the pitch.
+function attackingHeading(team) {
+  return { x: 0, y: team.attackingDirection };
 }
 
 function runPlayer(player, direction, seconds) {
