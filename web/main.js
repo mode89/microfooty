@@ -9,6 +9,11 @@ import {
   followCamera,
 } from "./view/camera.js";
 import { createDebugOverlay } from "./view/debug.js";
+import {
+  fitCanvasToWindow,
+  interpolateBallPosition,
+  interpolatePosition,
+} from "./view/presentation.js";
 import { renderBall, renderPitch, renderPlayer } from "./view/render.js";
 import { createBallSprite } from "./view/sprites.js";
 import { loadKitSprites } from "./view/kits.js";
@@ -18,10 +23,7 @@ const context = canvas.getContext("2d");
 const input = createInput();
 
 function fitToWindow() {
-  const ratio = window.devicePixelRatio || 1;
-  canvas.width = Math.round(canvas.clientWidth * ratio);
-  canvas.height = Math.round(canvas.clientHeight * ratio);
-  context.setTransform(ratio, 0, 0, ratio, 0, 0);
+  fitCanvasToWindow(canvas, context);
 }
 
 window.addEventListener("resize", fitToWindow);
@@ -59,26 +61,12 @@ function tick(seconds) {
   debug.recordTick();
 }
 
-function interpolate2D(from, to, alpha) {
-  return {
-    x: from.x + (to.x - from.x) * alpha,
-    y: from.y + (to.y - from.y) * alpha,
-  };
-}
-
-function interpolate3D(from, to, alpha) {
-  return {
-    ...interpolate2D(from, to, alpha),
-    z: from.z + (to.z - from.z) * alpha,
-  };
-}
-
 // Drawn up the pitch, so a body standing nearer the camera covers one behind
 // it whatever order the match keeps its players in.
 function drawnPlayers(from, to, alpha) {
   return to.players
     .map((player, index) => ({
-      position: interpolate2D(
+      position: interpolatePosition(
         from.players[index].position,
         player.position,
         alpha,
@@ -93,7 +81,7 @@ function render(alpha, wallClockSeconds) {
   debug.recordFrame(wallClockSeconds);
 
   const view = viewOfCamera({
-    centre: interpolate2D(previousCamera.centre, camera.centre, alpha),
+    centre: interpolatePosition(previousCamera.centre, camera.centre, alpha),
   });
   renderPitch(context, view);
   // Under every player, not sorted in with them: a ball lofted over a body
@@ -102,7 +90,7 @@ function render(alpha, wallClockSeconds) {
     context,
     view,
     {
-      position: interpolate3D(
+      position: interpolateBallPosition(
         previousMatch.ball.position,
         match.ball.position,
         alpha,

@@ -19,5 +19,6 @@ Browser-based, single-player, top-down arcade football prototype inspired by Sen
 - Install the dev tools first: `npm install`
 - Play in a browser: `./scripts/serve` (port 8000 by default), then open
   `http://localhost:8000/`
+- Review dribbling alone at `http://localhost:8000/demo/dribbling.html`
 
 **Memory — read first.** Read `MEMORY.md` at the start of each session, before your first response — it records facts about this project, its conventions, landmines, dead ends, and decision rationale you can't recover from the code. Skipping it risks repeating solved mistakes.

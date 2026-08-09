@@ -1,21 +1,27 @@
-// The whole match in one state: twenty-two players standing in two shapes, one
-// loose ball, and the single player the keyboard drives. Later steps add
-// fields here rather than reshape it.
+// The whole match in one state: twenty-two players, one loose ball, and the
+// single player the keyboard drives.
 import { directionToward } from "../ai/steering.js";
 import { PLAYER, PLAYER_CARRYING } from "../tuning.js";
 import { advanceBall, createBall } from "./ball.js";
 import { partBodies } from "./bodies.js";
 import { homePosition } from "./formation.js";
 import {
-  advanceDribble,
   advanceKick,
+  advanceTouchTimer,
   createControl,
-  isCarrying,
+  touchableBallGap,
+  touchBall,
 } from "./kick.js";
-import { advancePlayer, createPlayer, directionFromInput } from "./player.js";
+import {
+  advancePlayer,
+  createPlayer,
+  directionFromInput,
+  setRun,
+} from "./player.js";
 import { TEAMS } from "./team.js";
 
 const KEYBOARD_ROLE = "rightStriker";
+const STILL = Object.freeze({ x: 0, y: 0 });
 
 export function createMatch(teams = TEAMS) {
   const ball = createBall();
@@ -28,36 +34,57 @@ export function createMatch(teams = TEAMS) {
   if (keyboardIndex < 0)
     throw new Error(`no ${KEYBOARD_ROLE} for the keyboard to drive`);
 
-  return { players, ball, keyboardIndex };
+  return {
+    players,
+    ball,
+    keyboardIndex,
+    keyboardDirection: STILL,
+    recentToucherIndex: null,
+  };
 }
 
-// Everyone runs: the keyboard player on the held keys, the other twenty-one
-// back to their formation place. Bodies are parted after the runs, so a push
-// cannot be undone by the same tick's movement. Only the keyboard player plays
-// the ball until step 4.
 export function advanceMatch(match, actions, seconds) {
-  const run = match.players.map((player, index) =>
-    runPlayer(
-      player,
-      index === match.keyboardIndex
-        ? directionFromInput(actions)
-        : directionHome(player, match.ball.position),
-      seconds,
-    ),
+  const keyboardDirection = directionFromInput(actions);
+  const directions = match.players.map((player, index) =>
+    index === match.keyboardIndex
+      ? keyboardDirection
+      : directionHome(player, match.ball.position),
   );
-  const players = partBodies(run, seconds);
-  const played = playBall(
-    players[match.keyboardIndex],
-    advanceBall(match.ball, seconds),
-    actions.kick,
+  const previousToucherIndex = activeRecentToucher(match);
+  const cooled = match.players.map((player) => ({
+    ...player,
+    control: advanceTouchTimer(player.control, seconds),
+  }));
+  const playersReadyToTouch = setRuns(cooled, directions, previousToucherIndex);
+  const touched = playTouch(
+    playersReadyToTouch,
+    match.ball,
+    directions,
+    directionChanged(match.keyboardDirection, keyboardDirection)
+      ? match.keyboardIndex
+      : null,
+    previousToucherIndex,
+  );
+  const kicked = playKick(touched, match.keyboardIndex, actions.kick, seconds);
+  const recentToucherIndex = kicked.didKick
+    ? null
+    : activeRecentToucher(kicked);
+  const playersReadyToMove = setRuns(
+    kicked.players,
+    directions,
+    recentToucherIndex,
+  );
+  const players = partBodies(
+    playersReadyToMove.map((player) => advancePlayer(player, seconds)),
     seconds,
   );
+
   return {
     ...match,
-    players: players.map((player, index) =>
-      index === match.keyboardIndex ? played.player : player,
-    ),
-    ball: played.ball,
+    players,
+    ball: advanceBall(kicked.ball, seconds),
+    keyboardDirection,
+    recentToucherIndex,
   };
 }
 
@@ -65,8 +92,6 @@ export function keyboardPlayer(match) {
   return match.players[match.keyboardIndex];
 }
 
-// A player on the pitch is the M1 player plus the side and role they play and
-// how they stand with the ball. Everyone starts facing the goal they attack.
 function createMatchPlayer(team, role, ballPosition) {
   return {
     team,
@@ -79,47 +104,98 @@ function createMatchPlayer(team, role, ballPosition) {
   };
 }
 
-// A team attacks along the pitch, so its attacking direction is the y of a
-// heading and there is nothing to attack across the pitch.
 function attackingHeading(team) {
   return { x: 0, y: team.attackingDirection };
 }
 
-function runPlayer(player, direction, seconds) {
-  // Set by the previous tick's touch: this tick's touch needs the player to
-  // have moved first.
-  const carrying = isCarrying(player.control);
-  return {
-    ...player,
-    ...advancePlayer(
+function setRuns(players, directions, recentToucherIndex) {
+  return players.map((player, index) =>
+    setRun(
       player,
-      direction,
-      seconds,
-      carrying ? PLAYER_CARRYING : PLAYER,
+      directions[index],
+      index === recentToucherIndex ? PLAYER_CARRYING : PLAYER,
     ),
+  );
+}
+
+function activeRecentToucher({ recentToucherIndex, players }) {
+  return recentToucherIndex !== null &&
+    players[recentToucherIndex].control.touchTimer > 0
+    ? recentToucherIndex
+    : null;
+}
+
+function playTouch(
+  players,
+  ball,
+  directions,
+  timerBypassIndex,
+  recentToucherIndex,
+) {
+  const index = nearestToucher(players, ball, timerBypassIndex);
+  if (index === null) return { players, ball, recentToucherIndex };
+
+  const touched = touchBall(
+    players[index].control,
+    players[index],
+    ball,
+    directions[index],
+  );
+  return {
+    players: players.map((player, playerIndex) =>
+      playerIndex === index ? { ...player, control: touched.control } : player,
+    ),
+    ball: touched.ball,
+    recentToucherIndex: index,
   };
 }
 
-// The place a role stands slides with the ball, so a run home this tick aims at
-// the shape the ball asked for at the end of the last one.
+function nearestToucher(players, ball, timerBypassIndex) {
+  let nearestIndex = null;
+  let nearestGap = Infinity;
+  for (let index = 0; index < players.length; index += 1) {
+    const player = players[index];
+    const gap = touchableBallGap(
+      player.control,
+      player,
+      ball,
+      index === timerBypassIndex,
+    );
+    if (gap === null || gap >= nearestGap) continue;
+    nearestIndex = index;
+    nearestGap = gap;
+  }
+  return nearestIndex;
+}
+
+function playKick(state, keyboardIndex, kicking, seconds) {
+  const player = state.players[keyboardIndex];
+  const kicked = advanceKick(
+    player.control,
+    player,
+    state.ball,
+    kicking,
+    seconds,
+  );
+  return {
+    players: state.players.map((candidate, index) =>
+      index === keyboardIndex
+        ? { ...candidate, control: kicked.control }
+        : candidate,
+    ),
+    ball: kicked.ball,
+    recentToucherIndex: state.recentToucherIndex,
+    didKick: kicked.didKick,
+  };
+}
+
+function directionChanged(before, after) {
+  return before.x !== after.x || before.y !== after.y;
+}
+
 function directionHome(player, ballPosition) {
   return directionToward(
     player.position,
     homePosition(player.role, player.team.attackingDirection, ballPosition),
   );
-}
-
-function playBall(player, ball, kicking, seconds) {
-  const touched = advanceDribble(player.control, player, ball, seconds);
-  const kicked = advanceKick(
-    touched.control,
-    player,
-    touched.ball,
-    kicking,
-    seconds,
-  );
-  return {
-    player: { ...player, control: kicked.control },
-    ball: kicked.ball,
-  };
 }

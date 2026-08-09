@@ -7,17 +7,18 @@ _Reference context — observed facts and standing conventions for this project,
 ## Conventions
 
 - Bash calls that run the test suite, the linter, or the formatter (`node --test`, `npm run lint`, `npm run format`) are marked `safe: true`. Why: they only read the project and report or reformat it, so a confirmation prompt adds no protection.
-- Gameplay feel constants (control radius, ideal lead, cooldown) are the user's to choose, not retuned unasked. Why: they are judged by eye in the browser, where measurement cannot rank feel. How to apply: measure the options, report, apply the pick.
+- Gameplay feel constants (control radius, ideal lead, touch period) are the user's to choose, not retuned unasked. Why: measurements cannot rank feel. How to apply: measure options, report them, and apply the user's pick.
 - Numbers from delegated reviews are re-measured before being acted on. Why: two agent reports did not reproduce — a claimed stable 0.61 m dribble lead was really 1.2 m, and a claimed double-turn failure band did not exist at any re-turn delay.
 - A new test is checked by deleting the rule it names in a scratch copy of the module and confirming the test fails. Why: two kick tests passed against a deleted rule. How to apply: on tests written for a rule added in the same session.
 - One word serves each concept: `heading` for a unit run direction, `frame` for one of the four sprite names, `speed` for pace. Why: a review found `facing`, `heading` and `aim` all naming the same unit vector across three modules.
 - Velocities rebuilt from heading times speed are compared with a tolerance, never with equality. Why: two runs that differ only in a blocked axis take different normalise round-trips, so an exact match is luck rather than a rule.
-- A rule about ball control is asserted on the event it produces, a touch recorded, not on a distance. Why: the kicked-ball test asserted a gap that the kick cooldown does not control, so it would have passed with the rule deleted.
+- A rule about ball control is asserted on the event it produces, a touch recorded, not on a distance. Why: a kicked-ball test asserted a gap that the touch timer does not control, so it passed with the rule deleted.
 - A test waiting for a smoothed value to settle takes its tick count from the tuning constant, e.g. 10 × `CAMERA.smoothingSeconds`. Why: 600 fixed ticks left 0.025 m of a 22 m camera gap against a 0.01 m tolerance, failing three tests from birth.
 - A test fixture that must fall inside a tuning limit is derived from that constant, not written as a literal. Why: a hand-picked ball "inside every band" made the follow-share test fail when the keeper's rein shrank, blaming the wrong rule.
 - Tests that read feel constants are checked against plausible retunes of them, not only against deleted rules. Why: the deleted-rule set passed while a keeper rein cut from 3 m to 1.5 m falsely failed a test of the follow share.
 - The whole mutation set is re-run after a refactor of the code its tests cover. Why: the M2 step 2 refactor renamed a module and changed a helper's signature, and the re-run proved every rule still had a test that fails without it.
 - Scratch copies for mutation runs live outside the repo, e.g. `cp -r web test package.json /tmp/mut/`. Why: `node --test` collects any `*.test.js` in the tree, so probes and copies kept inside the repo are loaded as tests.
+- Mutation suites that create and edit scratch copies under `/tmp` are safe to run without confirmation. Why: they cannot change the working tree. How to apply: keep every mutation copy outside the repository.
 - `SPEC.md` is edited in the same session when a request changes what a step means: M2 step 1's art paragraph was rewritten when kits gained a second colour. Why: a stale step description misleads the next milestone.
 
 ## Gotchas
@@ -39,14 +40,6 @@ _Reference context — observed facts and standing conventions for this project,
 - `node --test` collects any file whose name matches `*-test.js`, `*_test.js` or `*.test.js` anywhere in the project, `web/` included, and then fails on browser globals. Browser-only demo pages avoid those name shapes.
 - `node --test` also runs every `.js` file under a `test/` directory, so `test/helpers.js` is reported as a test file with no tests. The `npm test` script passes `test/*.test.js` to keep the run to the specs.
 - `web/sprite-demo.html` carries its whole module inline in a `<script type="module">`, so ESLint, which reads `.js` files only, never checks it.
-- The peak player-to-ball gap in a turn is about `idealLead + maxSpeed × touchCooldown / 2`; the ball is kept while that stays under `controlRadius`. The estimate matched every measured combination of the three.
-- Braking on input against the run left the dribble turn peaks untouched: a 90 degree turn peaks at 0.89 m either way, and a 180 degree reversal loses the ball either way, at radius 1 with lead 0.8.
-- A full reversal at top speed peaks at about `idealLead` + 0.30 m: measured 0.90 m at lead 0.6, 1.00 m at radius 1.2 with lead 0.7, 1.10 m at radius 1.4 with lead 0.8. A 90° turn peaks about 0.11 m over the lead.
-- With a touch capped to a multiple of the run speed, a 180° turn keeps the ball only while `controlRadius` exceeds `idealLead` by about 0.4 m. At radius 1 and lead 0.8 a full reversal at top speed loses it.
-- A 180° turn cannot keep the ball while `minimumRunSpeed` is above about 0.4 m/s: the run passes through near-zero speed mid-reversal, no touch is allowed, and the ball rolls 20 m clear.
-- The sharp-turn touch pulls the ball from 0.79 m to 0.24 m in front of the feet when direction changes come fast: touches arrive sooner than the cooldown while each still aims one cooldown ahead.
-- The sharp-turn waiver compares run directions, not held keys, and steering rotates the velocity gradually: a 90° turn at top speed does not cross the 60° threshold within one 0.1 s cooldown, measured as no touch in the six ticks after a kick.
-- A one-tick tap leaves the ball at 9.6 m/s against an 8 m/s run, so the kicker catches it after about 0.3 s and touches it five more times in half a second. Escaping a top-speed chase needs above 10.5 m/s.
 - Kick travel measured with bounce and roll at a 23° launch: 20 m/s carries 46 m, 24 m/s 63 m, 28 m/s 83 m, 32 m/s 104 m, against a 105 m pitch. A flat 9 m/s tap rolls 13 m.
 - A charge summed in 1/60 s ticks stops just under its maximum (0.49999999999999994 against 0.5) and never reaches the clamp, so charge assertions need a tolerance rather than equality.
 - `Math.atan2(0, 0)` is 0, which points along +x, so a kick-direction test that runs the player along +x also passes with a zeroed aim. Direction tests run along ±y instead.
@@ -62,8 +55,8 @@ _Reference context — observed facts and standing conventions for this project,
 - The magenta background of `web/players.png` is keyed out at load time by `keyColour` in `web/view/sprites.js`, and the PNG keeps it. Why: the file stays the plain art source, editable in any pixel editor with no alpha channel to maintain.
 - A diagonal heading up the pitch shows the up frame, and only downward diagonals show a side frame. Why: the player's back towards the camera reads as running away, which the side frame hides.
 - A player's position is the point where the feet stand, as the ball's position is its point on the ground. Why: one ground-level meaning for both keeps player-to-ball distance honest for dribbling and tackling.
-- A touch aims the ball to arrive exactly as the next touch falls due, so no separate reach-time constant exists. Why: measured the best turn safety; at twice the cooldown a 90° turn holds but a 180° reversal is lost.
-- `web/world/kick.js` keeps one control state (cooldown, touchHeading, charge) for both touching and kicking. Why: a kick starts the touch cooldown, so two states had to be threaded through both advance calls and returned together.
+- Instant starts, stops and turns with 3 Hz touches are browser-approved. Why: the user accepted the arcade dribbling feel without acceleration or braking.
+- A low fast ball is controlled by replacing its horizontal velocity. Why: the user accepted the arcade interception behavior; no velocity-change cap is wanted.
 - A player's run is a unit `heading` plus a scalar `speed`, and `velocityOf` rebuilds the vector for the rules that want one. Why: the heading outlives the run, so a player who has stopped still points where they last ran.
 - A kick goes along the player's heading, with no aim state of its own. Why: the heading already persists when stopped, and the aim it replaced was seeded up the pitch, so a player who kicked before ever moving shot at their own goal.
 - The four sprite frames are picked from the heading angle alone, in `web/view/frames.js`. Why: the sticky dead band that stopped frame flicker needed the previously drawn frame, which the world no longer holds now that the heading is continuous.
@@ -71,16 +64,12 @@ _Reference context — observed facts and standing conventions for this project,
 - `KICK.maximumPower` in `web/tuning.js` is 28 m/s, which carries 83 m of the 105 m pitch. Why: picked over 24 m/s (63 m), which leaves less than "most of the pitch" as step 7 of `SPEC.md` asks, and 32 m/s (104 m).
 - Every team's `roles` aliases the single `FORMATION_442`, and the field stays despite the duplication. Why: `SPEC.md` §10.1 makes the formation part of team data, and M2 step 3 gives roles a ball-shifted home.
 - The Shift "tackle" binding is gone from `web/input.js` because the plan is single-button controls, while section 3.2 of `SPEC.md` still names a second button for the slide tackle.
-- `directionToward` shortens the run direction inside the slowing distance rather than only zeroing it inside the arrival band. Why: braking from 8 m/s covers about 1.2 m against a 0.3 m band, so a band alone overshoots and turns back.
-- A player steered onto a spot enters the arrival band at about 1.2 m/s and stops 0.03 m inside it, settling within 0.28 m of the spot. Measured over 5 tick lengths, 24 approach angles and 4 start speeds.
 - The body push lives in `web/world/bodies.js` as `partBodies`, not under `ai/`. Why: `SPEC.md` §10.2 names no file for it, and it moves bodies rather than deciding anything, so it belongs with the other world rules.
-- `PLAYER_CARRYING`'s 10% pace penalty is a feel choice, not ball control. Why: the touch aims at the player's own velocity, so a slower run pushes a slower ball — turn peaks were identical at 1.0, 0.9, 0.85 and 0.8 of top speed.
 
 ## Dead Ends
 
 - ✗ A touch that scales the player's velocity by a fixed factor: abandoned. The lead has no equilibrium — it changes by `(f−1)·v·T − ½·a·T²` per touch, so the ball rides the control radius edge and every turn loses it.
 - ✗ A two-zone touch, pushing near the feet and gathering further out: abandoned. The zones are judged on distance alone, so a ball beside or behind the player is also gathered, slows, drifts further behind and is lost.
-- ✗ A waiver letting a stopped player touch the ball again before the cooldown ends: abandoned. `touchIsDue` demands `speed >= minimumRunSpeed` first, so the branch is unreachable unless a test lifts that floor.
 - ✗ A 12 m outfield reach with a 6 m keeper reach for the ball-shifted shape: abandoned. The pitch clamp pinned the keeper on its own goal line, and keeper-to-defence spacing fell from 9.45 m to 0.60 m once the ball came 24 m into that half.
 
 ## Open Questions
@@ -89,5 +78,5 @@ _Reference context — observed facts and standing conventions for this project,
 
 - ? `BODY.pushRate` is 8, picked without a browser check: a full-speed run still walks through a standing body, and 16 would match run speed. The feel is the user's call.
 - ? Kick-off is not modelled, and both strikers' home places sit 8.0 m from the centre spot, inside the 9.15 m circle, so M3 has to settle what a legal kick-off shape looks like.
-- ? The lost 180° turn is left unfixed by choice at the end of M1: radius 1 with lead 0.8 still loses the ball on a full reversal at top speed, and the ball rolls about 20 m clear.
+- ? Per-player 3 Hz timers permit an aggregate touch every tick in a crowd; whether this looks too busy in team play is unjudged.
 - ? The 8 m along-pitch reach lets a team slide 16 m over a 105 m pitch, unjudged in a browser: it may read as stiff, but past about 10 m the defence crowds its own keeper.

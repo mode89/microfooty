@@ -1,43 +1,22 @@
-import test from "node:test";
 import assert from "node:assert/strict";
-import { BALL, DRIBBLE, KICK, PLAYER, PLAYER_CARRYING } from "../web/tuning.js";
+import test from "node:test";
+import { BALL, DRIBBLE, KICK, PLAYER } from "../web/tuning.js";
 import {
-  advanceDribble,
   advanceKick,
+  advanceTouchTimer,
   createControl,
-  isCarrying,
+  touchableBallGap,
+  touchBall,
 } from "../web/world/kick.js";
-import { advanceBall, createBall } from "../web/world/ball.js";
-import {
-  advancePlayer,
-  createPlayer,
-  directionFromInput,
-} from "../web/world/player.js";
-import { runAt } from "./helpers.js";
+import { createPlayer, setRun } from "../web/world/player.js";
 
 const TICK = 1 / 60;
-
-// The spec asks a touch to outrun the player "slightly". Twice the run is a
-// loose reading of that word, and it is the ceiling the rules may not pass.
-const MOST_A_TOUCH_MAY_OUTRUN = 2;
-
-function keys(...held) {
-  return Object.fromEntries(
-    ["up", "down", "left", "right"].map((key) => [key, held.includes(key)]),
-  );
-}
-
 const DOWN_THE_PITCH = Object.freeze({ x: 0, y: 1 });
+const NEAR_BALL = DRIBBLE.controlRadius * 0.3;
+const SHORT_HOLD = KICK.maximumCharge / 2;
 
-// The pitch runs along +y, so a player running "down" heads down the screen
-// and the ball ahead of them is at a larger y. At speed 0 they stand still,
-// heading down the pitch as they last ran.
 function runningPlayer(speed = PLAYER.maxSpeed) {
   return { position: { x: 0, y: 0 }, heading: DOWN_THE_PITCH, speed };
-}
-
-function playerRunning(velocity) {
-  return { position: { x: 0, y: 0 }, ...runAt(velocity) };
 }
 
 function ballAhead(distance, height = BALL.radius) {
@@ -54,57 +33,21 @@ function ballBeside(distance) {
   };
 }
 
-function afterOneTick(player, ball, control = createControl()) {
-  return advanceDribble(control, player, ball, TICK);
+function touch(
+  player,
+  ball,
+  direction = player.heading,
+  control = createControl(),
+) {
+  return touchBall(control, player, ball, direction);
 }
 
 function speed(body) {
   return Math.hypot(body.velocity.x, body.velocity.y);
 }
 
-function gapBetween(player, ball) {
-  return Math.hypot(
-    ball.position.x - player.position.x,
-    ball.position.y - player.position.y,
-  );
-}
-
-// One leg of a dribbling run, stepped as web/main.js steps it: both bodies
-// move, then the touch is applied. A touch shows itself as a full cooldown.
-function dribbleFor(start, direction, ticks) {
-  let { player, ball, control } = start;
-  const touchTicks = [];
-  let widestGap = 0;
-
-  for (let step = 0; step < ticks; step += 1) {
-    player = advancePlayer(
-      player,
-      direction,
-      TICK,
-      isCarrying(control) ? PLAYER_CARRYING : PLAYER,
-    );
-    ball = advanceBall(ball, TICK);
-    ({ control, ball } = advanceDribble(control, player, ball, TICK));
-    if (control.cooldown === DRIBBLE.touchCooldown) touchTicks.push(step);
-    widestGap = Math.max(widestGap, gapBetween(player, ball));
-  }
-  return { player, ball, control, touchTicks, widestGap };
-}
-
-function standingOver(ball) {
-  return {
-    player: createPlayer(),
-    ball,
-    control: createControl(),
-  };
-}
-
-// A hold time is spent in whole ticks with a part tick left over, so this much
-// of it counts as spent.
 const LAST_SLICE = 1e-9;
 
-// The button is held down for a run of ticks, carrying every result forward as
-// web/main.js does, so anything a held tick does to the ball is kept.
 function holdFor(player, ball, heldSeconds, control = createControl()) {
   let held = { control, ball };
   for (let left = heldSeconds; left > LAST_SLICE; left -= TICK)
@@ -118,7 +61,6 @@ function holdFor(player, ball, heldSeconds, control = createControl()) {
   return held;
 }
 
-// The release tick is the one that strikes the ball.
 function holdThenRelease(player, ball, heldSeconds, control) {
   const held = holdFor(player, ball, heldSeconds, control);
   return advanceKick(held.control, player, held.ball, false, TICK);
@@ -135,273 +77,145 @@ function elevationOf(ball) {
   );
 }
 
-// The share of a full charge that one held tick adds, which is the margin a
-// tap may sit above the flat minimum.
 const CHARGE_PER_TICK = TICK / KICK.maximumCharge;
 
-test("a touch on a ball at the ideal lead matches the ball to the run", () => {
+test("a touch uses the exact velocity needed to reach its target", () => {
   const player = runningPlayer();
-  const after = afterOneTick(player, ballAhead(DRIBBLE.idealLead));
+  const gap = DRIBBLE.idealLead / 2;
+  const after = touch(player, ballAhead(gap));
+  const targetAtNextTouch =
+    player.speed * DRIBBLE.touchPeriod + DRIBBLE.idealLead;
+  assert.ok(
+    Math.abs(
+      after.ball.velocity.y - (targetAtNextTouch - gap) / DRIBBLE.touchPeriod,
+    ) < 1e-9,
+  );
+  assert.equal(after.ball.velocity.x, 0);
+  assert.equal(after.control.touchTimer, DRIBBLE.touchPeriod);
+});
+
+test("a touch at the ideal lead matches the ball to the run", () => {
+  const player = runningPlayer();
+  const after = touch(player, ballAhead(DRIBBLE.idealLead));
   assert.ok(Math.abs(speed(after.ball) - player.speed) < 1e-9);
   assert.ok(after.ball.velocity.y > 0);
-  assert.equal(after.control.cooldown, DRIBBLE.touchCooldown);
 });
 
-test("a touch on a ball at the feet sends it out ahead of the run", () => {
-  const player = runningPlayer();
-  const after = afterOneTick(player, ballAhead(DRIBBLE.idealLead / 2));
-  assert.ok(speed(after.ball) > player.speed);
-  assert.ok(after.ball.velocity.y > 0);
-});
-
-test("a touch aims a ball at the player's side back in front of the run", () => {
-  const after = afterOneTick(
-    runningPlayer(),
-    ballBeside(DRIBBLE.controlRadius * 0.9),
-  );
-  assert.ok(after.ball.velocity.x < 0);
-  assert.ok(after.ball.velocity.y > 0);
-});
-
-test("a touch never sends the ball far faster than the run", () => {
-  for (const runSpeed of [0.5, 1, 3, PLAYER.maxSpeed])
-    for (const gap of [0.1, 0.4, DRIBBLE.idealLead, DRIBBLE.controlRadius]) {
-      const after = afterOneTick(runningPlayer(runSpeed), ballAhead(gap));
-      assert.ok(
-        speed(after.ball) <= runSpeed * MOST_A_TOUCH_MAY_OUTRUN,
-        `run ${runSpeed} m/s with the ball ${gap} m away sent it out at ${speed(after.ball).toFixed(2)} m/s`,
-      );
-    }
-});
-
-test("the touch strength stays inside the reading of a slight outrun", () => {
-  assert.ok(DRIBBLE.maxTouchOutrun > 1);
-  assert.ok(DRIBBLE.maxTouchOutrun <= MOST_A_TOUCH_MAY_OUTRUN);
-});
-
-test("a single tick of input does not launch the ball", () => {
-  const player = advancePlayer(
-    createPlayer(),
-    directionFromInput(keys("down")),
-    TICK,
-  );
-  const after = afterOneTick(player, ballAhead(0.15));
+test("a touch aims a ball at the player's side back in front", () => {
+  const distance = DRIBBLE.controlRadius * 0.9;
+  const after = touch(runningPlayer(), ballBeside(distance));
   assert.ok(
-    speed(after.ball) <= player.speed * MOST_A_TOUCH_MAY_OUTRUN,
-    `a ${player.speed.toFixed(2)} m/s nudge sent the ball out at ${speed(after.ball).toFixed(2)} m/s`,
+    Math.abs(after.ball.velocity.x + distance / DRIBBLE.touchPeriod) < 1e-9,
+  );
+  assert.ok(after.ball.velocity.y > 0);
+});
+
+test("a nonzero touch direction overrides the player's old heading", () => {
+  const after = touch(runningPlayer(), ballAhead(NEAR_BALL), { x: 1, y: 0 });
+  assert.ok(after.ball.velocity.x > 0);
+  assert.ok(after.ball.velocity.y < 0);
+});
+
+test("zero touch direction uses the player's last heading", () => {
+  const after = touch(runningPlayer(0), ballAhead(NEAR_BALL), { x: 0, y: 0 });
+  assert.ok(after.ball.velocity.y > 0);
+  assert.equal(after.ball.velocity.x, 0);
+});
+
+test("an immediate run uses full player speed in its touch", () => {
+  const player = setRun(createPlayer(), DOWN_THE_PITCH);
+  const after = touch(player, ballAhead(NEAR_BALL));
+  const targetAtNextTouch =
+    player.position.y + player.speed * DRIBBLE.touchPeriod + DRIBBLE.idealLead;
+  assert.ok(
+    Math.abs(
+      after.ball.velocity.y -
+        (targetAtNextTouch - NEAR_BALL) / DRIBBLE.touchPeriod,
+    ) < 1e-9,
   );
 });
 
-test("a touch leaves the ball height and its vertical speed alone", () => {
+test("a touch leaves ball height and vertical speed alone", () => {
   const rising = {
-    position: { x: 0, y: 1, z: 0.3 },
+    position: { x: 0, y: DRIBBLE.controlRadius, z: 0.3 },
     velocity: { x: 0, y: 0, z: 1.5 },
   };
-  const after = afterOneTick(runningPlayer(), rising);
-  assert.equal(after.ball.position.z, 0.3);
-  assert.equal(after.ball.velocity.z, 1.5);
+  const after = touch(runningPlayer(), rising);
+  assert.equal(after.ball.position.z, rising.position.z);
+  assert.equal(after.ball.velocity.z, rising.velocity.z);
 });
 
-test("no touch happens outside the control radius", () => {
-  const ball = ballAhead(DRIBBLE.controlRadius + 0.01);
-  const after = afterOneTick(runningPlayer(), ball);
-  assert.deepEqual(after.ball, ball);
+test("a ball outside the control radius is not touchable", () => {
+  const ball = ballAhead(DRIBBLE.controlRadius * 1.01);
+  assert.equal(touchableBallGap(createControl(), runningPlayer(), ball), null);
 });
 
-test("no touch happens above the height limit", () => {
-  const ball = ballAhead(1, DRIBBLE.maxTouchHeight + 0.01);
-  const after = afterOneTick(runningPlayer(), ball);
-  assert.deepEqual(after.ball, ball);
+test("a ball above the height limit is not touchable", () => {
+  const ball = ballAhead(DRIBBLE.controlRadius, DRIBBLE.maxTouchHeight * 1.01);
+  assert.equal(touchableBallGap(createControl(), runningPlayer(), ball), null);
 });
 
-test("no touch happens below the minimum run speed", () => {
+test("a standing player touches along their last heading", () => {
+  const gap = NEAR_BALL;
+  const after = touch(runningPlayer(0), ballAhead(gap));
+  const expected = (DRIBBLE.idealLead - gap) / DRIBBLE.touchPeriod;
+  assert.ok(Math.abs(after.ball.velocity.y - expected) < 1e-9);
+});
+
+test("the touch timer blocks and then allows another touch", () => {
+  const player = runningPlayer();
   const ball = ballAhead(DRIBBLE.idealLead);
-  const after = afterOneTick(
-    runningPlayer(DRIBBLE.minimumRunSpeed - 0.01),
-    ball,
-  );
-  assert.deepEqual(after.ball, ball);
+  const touched = touch(player, ball);
+  const cooling = advanceTouchTimer(touched.control, TICK);
+  assert.equal(touchableBallGap(cooling, player, ball), null);
+  assert.ok(cooling.touchTimer < touched.control.touchTimer);
+
+  const ready = advanceTouchTimer(touched.control, DRIBBLE.touchPeriod);
+  assert.equal(touchableBallGap(ready, player, ball), DRIBBLE.idealLead);
 });
 
-test("a touch from a standstill leaves the ball alone", () => {
-  const standing = runningPlayer(0);
-  const ball = ballAhead(0.3);
-  // The one way to reach a touch with no pace at all.
-  const settings = { ...DRIBBLE, minimumRunSpeed: 0 };
-  const after = advanceDribble(createControl(), standing, ball, TICK, settings);
-  assert.deepEqual(after.ball, ball);
-});
-
-test("no touch happens during the cooldown", () => {
-  const carrying = afterOneTick(
-    runningPlayer(),
-    ballAhead(DRIBBLE.idealLead),
-  ).control;
+test("regular touches come at 3 Hz", () => {
+  assert.equal(DRIBBLE.touchPeriod, 1 / 3);
+  const player = runningPlayer();
   const ball = ballAhead(DRIBBLE.idealLead);
-  const after = advanceDribble(carrying, runningPlayer(), ball, TICK);
-  assert.deepEqual(after.ball, ball);
-  assert.ok(after.control.cooldown < carrying.cooldown);
-});
-
-test("the cooldown runs out and the next touch is allowed", () => {
-  const carrying = afterOneTick(
-    runningPlayer(),
-    ballAhead(DRIBBLE.idealLead),
-  ).control;
-  const after = advanceDribble(
-    carrying,
-    runningPlayer(),
-    ballAhead(DRIBBLE.idealLead),
-    DRIBBLE.touchCooldown,
-  );
-  assert.equal(after.control.cooldown, DRIBBLE.touchCooldown);
-});
-
-test("touches come as often as the cooldown says", () => {
-  const run = dribbleFor(
-    standingOver(createBall({ x: 0, y: DRIBBLE.idealLead })),
-    directionFromInput(keys("down")),
-    300,
-  );
-  const intervals = run.touchTicks
+  let control = touch(player, ball).control;
+  const touchTicks = [];
+  for (let step = 1; step <= 300; step += 1) {
+    control = advanceTouchTimer(control, TICK);
+    if (touchableBallGap(control, player, ball) === null) continue;
+    control = touch(player, ball, player.heading, control).control;
+    touchTicks.push(step);
+  }
+  const intervals = touchTicks
     .slice(1)
-    .map((step, index) => step - run.touchTicks[index]);
-
-  assert.ok(intervals.length > 20, "too few touches to judge the cadence");
-  const [cadence] = intervals;
+    .map((step, index) => step - touchTicks[index]);
+  assert.ok(intervals.length > 10, "too few touches to judge the cadence");
   assert.deepEqual(
     intervals,
-    intervals.map(() => cadence),
-    `touches should come at one steady interval, not ${intervals.join(", ")}`,
-  );
-  assert.ok(
-    Math.abs(cadence * TICK - DRIBBLE.touchCooldown) < TICK,
-    `touches came every ${(cadence * TICK).toFixed(4)} s, not every ${DRIBBLE.touchCooldown} s`,
+    intervals.map(() => Math.round(DRIBBLE.touchPeriod / TICK)),
   );
 });
 
-test("a sharp turn earns a touch before the cooldown ends", () => {
-  const running = afterOneTick(runningPlayer(), ballAhead(DRIBBLE.idealLead));
-  assert.ok(running.control.cooldown > 0);
-
-  const straightOn = advanceDribble(
-    running.control,
-    runningPlayer(),
-    ballAhead(DRIBBLE.idealLead),
-    TICK,
-  );
-  assert.ok(straightOn.control.cooldown < running.control.cooldown);
-
-  const turned = advanceDribble(
-    running.control,
-    playerRunning({ x: PLAYER.maxSpeed, y: 0 }),
-    ballAhead(DRIBBLE.idealLead),
-    TICK,
-  );
-  assert.equal(turned.control.cooldown, DRIBBLE.touchCooldown);
-  assert.ok(turned.ball.velocity.x > 0);
+test("a changed heading alone does not bypass the touch timer", () => {
+  const player = runningPlayer();
+  const ball = ballAhead(DRIBBLE.idealLead);
+  const control = touch(player, ball).control;
+  const turnedPlayer = { ...player, heading: { x: 1, y: 0 } };
+  assert.equal(touchableBallGap(control, turnedPlayer, ball), null);
 });
 
-test("a gentle change of direction still waits for the cooldown", () => {
-  const running = afterOneTick(runningPlayer(), ballAhead(DRIBBLE.idealLead));
-  const drifting = advanceDribble(
-    running.control,
-    playerRunning({ x: PLAYER.maxSpeed * 0.3, y: PLAYER.maxSpeed * 0.95 }),
-    ballAhead(DRIBBLE.idealLead),
-    TICK,
-  );
-  assert.ok(drifting.control.cooldown < running.control.cooldown);
-});
-
-test("a fresh touch means the player is carrying the ball", () => {
-  const after = afterOneTick(runningPlayer(), ballAhead(DRIBBLE.idealLead));
-  assert.ok(isCarrying(after.control));
-  assert.ok(!isCarrying(createControl()));
-});
-
-test("a ball crossing faster than the run is deflected, not trapped", () => {
-  // Faster than the run by more than one touch may change, so no touch can
-  // bring it down to the pace of the run.
-  const crossingSpeed = PLAYER.maxSpeed + DRIBBLE.maxTouchSpeedChange + 2;
-  const crossing = {
-    position: { x: 0, y: 1, z: BALL.radius },
-    velocity: { x: 0, y: crossingSpeed, z: 0 },
+test("a touch replaces a fast ball's horizontal velocity", () => {
+  const resting = ballAhead(NEAR_BALL);
+  const incoming = {
+    ...resting,
+    velocity: { x: -20, y: 15, z: 0 },
   };
-  const after = afterOneTick(runningPlayer(), crossing);
-  assert.ok(speed(after.ball) >= crossingSpeed - DRIBBLE.maxTouchSpeedChange);
-  assert.ok(speed(after.ball) > PLAYER.maxSpeed);
-
-  const halfASecondLater = advanceBall(after.ball, 0.5);
-  assert.ok(
-    gapBetween(runningPlayer(), halfASecondLater) > DRIBBLE.controlRadius,
-  );
+  const expected = touch(runningPlayer(), resting);
+  const received = touch(runningPlayer(), incoming);
+  assert.deepEqual(received.ball.velocity, expected.ball.velocity);
 });
 
-test("touches carry the ball from the feet out to the ideal lead", () => {
-  const down = directionFromInput(keys("down"));
-  const start = standingOver(createBall({ x: 0, y: 0.1 }));
-  const run = dribbleFor(start, down, 120);
-
-  assert.ok(
-    run.widestGap <= DRIBBLE.idealLead + 0.1,
-    `the ball ran out to ${run.widestGap.toFixed(2)} m, past the lead`,
-  );
-  const settled = gapBetween(run.player, run.ball);
-  assert.ok(
-    settled > DRIBBLE.idealLead - 0.1,
-    `the ball settled at ${settled.toFixed(2)} m, short of the lead`,
-  );
-});
-
-test("a player runs onto a ball, dribbles it and turns a corner with it", () => {
-  const down = directionFromInput(keys("down"));
-  const right = directionFromInput(keys("right"));
-  // Nine metres of run-up, which takes most of the first hundred ticks.
-  const start = {
-    player: createPlayer({ x: -30, y: -45 }),
-    ball: createBall({ x: -30, y: -36 }),
-    control: createControl(),
-  };
-  // Two thirds of the touches a leg can hold, which leaves room for the ticks
-  // spent reaching the ball and for a tuning change.
-  const leastTouchesPerLeg = Math.floor(
-    ((100 * TICK) / DRIBBLE.touchCooldown) * (2 / 3),
-  );
-
-  const approach = dribbleFor(start, down, 100);
-  assert.ok(
-    approach.touchTicks.length > 0,
-    "the player never reached the ball",
-  );
-  assert.ok(
-    gapBetween(approach.player, approach.ball) <= DRIBBLE.controlRadius,
-  );
-
-  const straight = dribbleFor(approach, down, 100);
-  assert.ok(straight.widestGap <= DRIBBLE.controlRadius, "the ball was lost");
-  assert.ok(straight.touchTicks.length >= leastTouchesPerLeg);
-  assert.ok(
-    straight.ball.position.y > straight.player.position.y,
-    "the ball fell behind",
-  );
-
-  const corner = dribbleFor(straight, right, 100);
-  assert.ok(
-    corner.widestGap <= DRIBBLE.controlRadius,
-    "the turn lost the ball",
-  );
-  assert.ok(corner.touchTicks.length >= leastTouchesPerLeg);
-  assert.ok(
-    corner.ball.position.x > corner.player.position.x,
-    "the ball is not ahead",
-  );
-  assert.ok(
-    Math.abs(corner.ball.position.y - corner.player.position.y) < 0.3,
-    "the ball never came round the corner",
-  );
-});
-
-test("the charge builds while the button is held and stops at the maximum", () => {
+test("the charge builds while held and stops at the maximum", () => {
   const player = runningPlayer();
   const ball = ballAhead(DRIBBLE.idealLead);
   function hold(control, seconds) {
@@ -410,16 +224,15 @@ test("the charge builds while the button is held and stops at the maximum", () =
 
   const oneTick = hold(createControl(), TICK);
   assert.ok(Math.abs(oneTick.charge - TICK) < 1e-9);
-
   const twoTicks = hold(oneTick, TICK);
   assert.ok(Math.abs(twoTicks.charge - 2 * TICK) < 1e-9);
-
   const overheld = hold(twoTicks, KICK.maximumCharge);
   assert.equal(overheld.charge, KICK.maximumCharge);
 });
 
-test("a tap kicks the ball at the minimum power, flat along the ground", () => {
-  const after = holdThenRelease(runningPlayer(), ballAhead(0.3), TICK);
+test("a tap kicks at minimum power and a low angle", () => {
+  const after = holdThenRelease(runningPlayer(), ballAhead(NEAR_BALL), TICK);
+  assert.ok(after.didKick);
   assert.ok(powerOf(after.ball) >= KICK.minimumPower);
   assert.ok(
     powerOf(after.ball) <=
@@ -430,140 +243,84 @@ test("a tap kicks the ball at the minimum power, flat along the ground", () => {
   assert.equal(after.control.charge, 0);
 });
 
-test("holding the button charges without touching the ball", () => {
-  const resting = ballAhead(0.3);
+test("holding the button charges without changing the ball", () => {
+  const resting = ballAhead(NEAR_BALL);
   const held = holdFor(runningPlayer(), resting, KICK.maximumCharge);
-  assert.deepEqual(held.ball.velocity, { x: 0, y: 0, z: 0 });
-  assert.deepEqual(held.ball.position, resting.position);
+  assert.deepEqual(held.ball, resting);
+  assert.ok(!held.didKick);
   assert.ok(Math.abs(held.control.charge - KICK.maximumCharge) < 1e-9);
 });
 
-test("a full hold kicks the ball at the maximum power and angle", () => {
+test("a full hold kicks at maximum power and angle", () => {
   const after = holdThenRelease(
     runningPlayer(),
-    ballAhead(0.3),
+    ballAhead(NEAR_BALL),
     KICK.maximumCharge,
   );
   assert.ok(Math.abs(powerOf(after.ball) - KICK.maximumPower) < 1e-9);
   assert.ok(Math.abs(elevationOf(after.ball) - KICK.maximumElevation) < 1e-9);
 });
 
-test("power and launch angle both rise with the time the button is held", () => {
+test("power and launch angle rise with hold time", () => {
   const holds = [
     TICK,
     ...[0.25, 0.5, 0.75, 1].map((part) => part * KICK.maximumCharge),
   ];
   const kicks = holds.map(
-    (held) => holdThenRelease(runningPlayer(), ballAhead(0.3), held).ball,
+    (held) => holdThenRelease(runningPlayer(), ballAhead(NEAR_BALL), held).ball,
   );
   for (let step = 1; step < kicks.length; step += 1) {
     const [before, after] = [kicks[step - 1], kicks[step]];
-    assert.ok(
-      powerOf(after) > powerOf(before),
-      `power fell at ${holds[step]} s`,
-    );
-    assert.ok(
-      elevationOf(after) > elevationOf(before),
-      `the launch angle fell at ${holds[step]} s`,
-    );
+    assert.ok(powerOf(after) > powerOf(before));
+    assert.ok(elevationOf(after) > elevationOf(before));
   }
 });
 
 test("a release out of kicking range leaves the ball alone", () => {
   for (const ball of [
-    ballAhead(KICK.range + 0.01),
-    ballAhead(0.3, KICK.maximumHeight + 0.01),
+    ballAhead(KICK.range * 1.01),
+    ballAhead(NEAR_BALL, KICK.maximumHeight * 1.01),
   ]) {
-    const untouched = structuredClone(ball);
-    const after = holdThenRelease(runningPlayer(), ball, 0.3);
-    assert.deepEqual(after.ball, untouched);
-    assert.deepEqual(ball, untouched, "the ball was changed in place");
+    const after = holdThenRelease(runningPlayer(), ball, SHORT_HOLD);
+    assert.deepEqual(after.ball, ball);
+    assert.ok(!after.didKick);
   }
 });
 
-test("a charge released with no ball nearby is spent, not saved", () => {
+test("a missed release spends its charge", () => {
   const player = runningPlayer();
-  const wasted = holdThenRelease(player, ballAhead(KICK.range + 0.01), 0.3);
-  assert.equal(wasted.control.charge, 0);
-
-  const nextTap = advanceKick(
-    wasted.control,
+  const missed = holdThenRelease(
     player,
-    ballAhead(0.3),
+    ballAhead(KICK.range * 1.01),
+    SHORT_HOLD,
+  );
+  assert.equal(missed.control.charge, 0);
+  const next = advanceKick(
+    missed.control,
+    player,
+    ballAhead(NEAR_BALL),
     false,
     TICK,
   );
-  assert.deepEqual(nextTap.ball.velocity, { x: 0, y: 0, z: 0 });
+  assert.ok(!next.didKick);
 });
 
-test("a kick goes the way the player last ran, even after stopping", () => {
-  // Down the pitch, which no unset or zeroed heading can point to by accident.
-  const stopped = runningPlayer(0);
-  const after = holdThenRelease(stopped, ballAhead(0.3), 0.2);
+test("a stopped player kicks along their last heading", () => {
+  const after = holdThenRelease(
+    runningPlayer(0),
+    ballAhead(NEAR_BALL),
+    SHORT_HOLD,
+  );
   assert.ok(after.ball.velocity.y > 0);
   assert.ok(Math.abs(after.ball.velocity.x) < 1e-9);
 });
 
-test("a player who has kicked the ball away is not carrying it", () => {
-  const kicked = holdThenRelease(runningPlayer(), ballAhead(0.3), TICK);
-  assert.ok(kicked.control.cooldown > 0, "the kick started no cooldown");
-  assert.ok(!isCarrying(kicked.control));
-});
-
-test("a struck pass is not dribbled back by the player who kicked it", () => {
-  const down = directionFromInput(keys("down"));
-  // The weakest tap leaves the ball barely faster than the run and is meant to
-  // be run onto; a pass with a charge behind it is played away for good.
-  const passCharge = KICK.maximumCharge / 4;
-  // Every phase of the touch cadence, since a kick may land at any point in it.
-  for (let phase = 0; phase < 8; phase += 1) {
-    const run = dribbleFor(
-      standingOver(createBall({ x: 0, y: 0.4 })),
-      down,
-      120 + phase,
-    );
-    const passed = holdThenRelease(
-      run.player,
-      run.ball,
-      passCharge,
-      run.control,
-    );
-    const chase = dribbleFor({ ...passed, player: run.player }, down, 30);
-
-    assert.deepEqual(
-      chase.touchTicks,
-      [],
-      `a pass struck at phase ${phase} was touched again and dribbled on`,
-    );
-  }
-});
-
-test("turning away cannot win back a ball the player has just kicked", () => {
-  const standing = standingOver(createBall({ x: 0, y: 0.3 }));
-  const kicked = holdThenRelease(
-    standing.player,
-    standing.ball,
-    TICK,
-    standing.control,
-  );
-  assert.ok(kicked.ball.velocity.y < 0, "the kick did not go up the pitch");
-
-  // On the tick the cooldown reaches zero the ball is loose again and may
-  // fairly be chased down, so the rule only covers the ticks before it.
-  const ticksHeldOff = Math.round(KICK.cooldown / TICK) - 1;
-  // A full reversal, the turn that most readily earns a touch of its own.
-  const chasing = dribbleFor(
-    { ...kicked, player: standing.player },
-    directionFromInput(keys("down")),
-    ticksHeldOff,
-  );
-  assert.deepEqual(
-    chasing.touchTicks,
-    [],
-    "the turn earned a touch on the kicked ball",
-  );
-  assert.ok(
-    chasing.ball.velocity.y < 0,
-    "the kicked ball was turned round and dribbled back",
+test("a successful kick starts the touch timer", () => {
+  const kicked = holdThenRelease(runningPlayer(), ballAhead(NEAR_BALL), TICK);
+  assert.ok(kicked.didKick);
+  assert.equal(kicked.control.touchTimer, KICK.touchDelay);
+  assert.equal(
+    touchableBallGap(kicked.control, runningPlayer(), kicked.ball),
+    null,
   );
 });

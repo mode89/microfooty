@@ -7,7 +7,14 @@ import {
 } from "../web/world/match.js";
 import { homePosition } from "../web/world/formation.js";
 import { TEAMS } from "../web/world/team.js";
-import { BALL, BODY, DRIBBLE, PLAYER, STEERING } from "../web/tuning.js";
+import {
+  BALL,
+  BODY,
+  DRIBBLE,
+  PLAYER,
+  PLAYER_CARRYING,
+  STEERING,
+} from "../web/tuning.js";
 
 const STILL = Object.freeze({
   up: false,
@@ -18,14 +25,17 @@ const STILL = Object.freeze({
   debug: false,
 });
 const RUNNING_UP = Object.freeze({ ...STILL, up: true });
+const RUNNING_RIGHT = Object.freeze({ ...STILL, right: true });
 const KICKING_UP = Object.freeze({ ...RUNNING_UP, kick: true });
 const KICKING_STILL = Object.freeze({ ...STILL, kick: true });
 const TICK = 1 / 60;
 
-// Stands the keyboard player a stride below the ball on the centre spot, so a
-// run up the pitch reaches it. Nothing else moves in this step, so this is the
-// only way a test can set up a touch.
-const STRIDE_BEHIND_THE_BALL = 0.9;
+// Stands the keyboard player within touching range below the centre spot.
+const STRIDE_BEHIND_THE_BALL = DRIBBLE.controlRadius * 0.9;
+const NEAR_BALL = DRIBBLE.controlRadius * 0.2;
+const MID_RANGE = DRIBBLE.controlRadius * 0.5;
+const FARTHER_BALL = DRIBBLE.controlRadius * 0.6;
+const CONTROL_EDGE = DRIBBLE.controlRadius * 0.9;
 
 // Far enough up the pitch to slide every home clear of the arrival band the
 // players settled in at kick-off.
@@ -39,6 +49,23 @@ function placed(match, positions) {
     players: match.players.map((player, index) =>
       index in positions ? { ...player, position: positions[index] } : player,
     ),
+  };
+}
+
+function changedPlayers(match, changes) {
+  return {
+    ...match,
+    players: match.players.map((player, index) => {
+      const change = changes[index];
+      if (!change) return player;
+      return {
+        ...player,
+        ...change,
+        control: change.control
+          ? { ...player.control, ...change.control }
+          : player.control,
+      };
+    }),
   };
 }
 
@@ -70,6 +97,25 @@ function groundSpeed({ velocity }) {
   return Math.hypot(velocity.x, velocity.y);
 }
 
+function createOnePlayerMatch() {
+  const fullMatch = createMatch();
+  return {
+    ...fullMatch,
+    players: [
+      {
+        ...keyboardPlayer(fullMatch),
+        position: { x: 0, y: 0 },
+      },
+    ],
+    ball: {
+      ...fullMatch.ball,
+      position: { x: 0, y: DRIBBLE.idealLead, z: BALL.radius },
+    },
+    keyboardIndex: 0,
+    recentToucherIndex: null,
+  };
+}
+
 test("a match puts twenty-two players on the pitch, eleven a side", () => {
   const match = createMatch();
   assert.equal(match.players.length, 22);
@@ -83,11 +129,236 @@ test("a match puts twenty-two players on the pitch, eleven a side", () => {
 
 test("a match holds one control per player", () => {
   const match = createMatch();
-  match.players.forEach((player) => assert.equal(player.control.cooldown, 0));
+  match.players.forEach((player) => assert.equal(player.control.touchTimer, 0));
   assert.equal(
     new Set(match.players.map((player) => player.control)).size,
     match.players.length,
   );
+});
+
+test("at most one player touches the ball in a tick", () => {
+  const match = placed(createMatch(), {
+    0: { x: -MID_RANGE, y: 0 },
+    1: { x: NEAR_BALL, y: 0 },
+  });
+  const after = advanceMatch(match, STILL, TICK);
+  assert.equal(
+    after.players.filter(
+      (player) => player.control.touchTimer === DRIBBLE.touchPeriod,
+    ).length,
+    1,
+  );
+});
+
+test("the nearest eligible player takes the touch", () => {
+  const match = placed(createMatch(), {
+    0: { x: -FARTHER_BALL, y: 0 },
+    1: { x: NEAR_BALL, y: 0 },
+  });
+  const after = advanceMatch(match, STILL, TICK);
+  assert.equal(after.recentToucherIndex, 1);
+  assert.equal(after.players[1].control.touchTimer, DRIBBLE.touchPeriod);
+  assert.equal(after.players[0].control.touchTimer, 0);
+});
+
+test("equal touch distances use stable player order", () => {
+  const match = placed(createMatch(), {
+    0: { x: -MID_RANGE, y: 0 },
+    1: { x: MID_RANGE, y: 0 },
+  });
+  assert.equal(advanceMatch(match, STILL, TICK).recentToucherIndex, 0);
+});
+
+test("a directional input change allows an early touch and resets its timer", () => {
+  const created = createMatch();
+  let match = placed(created, {
+    [created.keyboardIndex]: { x: 0, y: MID_RANGE },
+  });
+  match = changedPlayers(match, {
+    [match.keyboardIndex]: {
+      control: {
+        touchTimer: DRIBBLE.touchPeriod / 2,
+      },
+    },
+  });
+
+  const after = advanceMatch(match, RUNNING_UP, TICK);
+  assert.equal(
+    after.players[match.keyboardIndex].control.touchTimer,
+    DRIBBLE.touchPeriod,
+  );
+  assert.equal(after.recentToucherIndex, match.keyboardIndex);
+  assert.ok(after.ball.velocity.y < 0);
+});
+
+test("releasing directional input earns a touch along the last heading", () => {
+  const created = createMatch();
+  let match = placed(created, {
+    [created.keyboardIndex]: { x: 0, y: MID_RANGE },
+  });
+  match = changedPlayers(
+    { ...match, keyboardDirection: { x: 0, y: -1 } },
+    {
+      [match.keyboardIndex]: {
+        heading: { x: 0, y: -1 },
+        control: {
+          touchTimer: DRIBBLE.touchPeriod / 2,
+        },
+      },
+    },
+  );
+
+  const after = advanceMatch(match, STILL, TICK);
+  assert.equal(
+    after.players[match.keyboardIndex].control.touchTimer,
+    DRIBBLE.touchPeriod,
+  );
+  assert.equal(after.recentToucherIndex, match.keyboardIndex);
+  assert.ok(after.ball.velocity.y < 0);
+});
+
+test("an out-of-range input change does not reset the touch timer", () => {
+  const created = createMatch();
+  const startingTimer = DRIBBLE.touchPeriod / 2;
+  const match = changedPlayers(created, {
+    [created.keyboardIndex]: {
+      control: { touchTimer: startingTimer },
+    },
+  });
+  const changed = advanceMatch(match, RUNNING_UP, TICK);
+  assert.ok(
+    Math.abs(
+      changed.players[match.keyboardIndex].control.touchTimer -
+        (startingTimer - TICK),
+    ) < 1e-9,
+  );
+  const unchanged = advanceMatch(changed, RUNNING_UP, TICK);
+  assert.ok(
+    Math.abs(
+      unchanged.players[match.keyboardIndex].control.touchTimer -
+        (startingTimer - 2 * TICK),
+    ) < 1e-9,
+  );
+  assert.equal(unchanged.recentToucherIndex, null);
+});
+
+test("an input-change touch is checked before the player moves", () => {
+  const created = createMatch();
+  const match = placed(created, {
+    [created.keyboardIndex]: { x: 0, y: -CONTROL_EDGE },
+  });
+  const after = advanceMatch(match, RUNNING_UP, TICK);
+  assert.equal(after.recentToucherIndex, match.keyboardIndex);
+  assert.equal(
+    after.players[match.keyboardIndex].control.touchTimer,
+    DRIBBLE.touchPeriod,
+  );
+});
+
+test("unchanged input still waits for the player's timer", () => {
+  const created = createMatch();
+  let match = placed(created, {
+    [created.keyboardIndex]: { x: 0, y: MID_RANGE },
+  });
+  match = changedPlayers(
+    { ...match, keyboardDirection: { x: 0, y: -1 } },
+    {
+      [match.keyboardIndex]: {
+        control: {
+          touchTimer: DRIBBLE.touchPeriod / 2,
+        },
+      },
+    },
+  );
+
+  const after = advanceMatch(match, RUNNING_UP, TICK);
+  assert.ok(
+    after.players[match.keyboardIndex].control.touchTimer <
+      match.players[match.keyboardIndex].control.touchTimer,
+  );
+  assert.equal(after.recentToucherIndex, null);
+  assert.deepEqual(after.ball.velocity, match.ball.velocity);
+});
+
+test("the nearest regular touch beats a farther input-change touch", () => {
+  const created = createMatch();
+  const otherIndex = created.keyboardIndex === 0 ? 1 : 0;
+  let match = placed(created, {
+    [created.keyboardIndex]: { x: 0, y: FARTHER_BALL },
+    [otherIndex]: { x: 0, y: -NEAR_BALL },
+  });
+  match = changedPlayers(match, {
+    [match.keyboardIndex]: {
+      control: {
+        touchTimer: DRIBBLE.touchPeriod / 2,
+      },
+    },
+  });
+
+  const after = advanceMatch(match, RUNNING_UP, TICK);
+  assert.equal(after.recentToucherIndex, otherIndex);
+  assert.equal(
+    after.players[otherIndex].control.touchTimer,
+    DRIBBLE.touchPeriod,
+  );
+  assert.ok(
+    Math.abs(
+      after.players[match.keyboardIndex].control.touchTimer -
+        (DRIBBLE.touchPeriod / 2 - TICK),
+    ) < 1e-9,
+  );
+});
+
+test("the carrying pace penalty transfers to a new toucher immediately", () => {
+  let match = placed(
+    {
+      ...createMatch(),
+      recentToucherIndex: 0,
+    },
+    {
+      0: { x: -FARTHER_BALL, y: 0 },
+      1: { x: NEAR_BALL, y: 0 },
+    },
+  );
+  match = changedPlayers(match, {
+    0: {
+      control: {
+        touchTimer: DRIBBLE.touchPeriod / 2,
+      },
+    },
+  });
+
+  const after = advanceMatch(match, STILL, TICK);
+  assert.equal(after.recentToucherIndex, 1);
+  assert.ok(Math.abs(after.players[0].speed - PLAYER.maxSpeed) < 1e-9);
+  assert.ok(Math.abs(after.players[1].speed - PLAYER_CARRYING.maxSpeed) < 1e-9);
+});
+
+test("only the recent toucher pays the carrying pace penalty", () => {
+  const match = changedPlayers(
+    {
+      ...createMatch(),
+      recentToucherIndex: 0,
+    },
+    {
+      0: {
+        position: { x: -20, y: 20 },
+        control: {
+          touchTimer: DRIBBLE.touchPeriod / 2,
+        },
+      },
+      1: {
+        position: { x: 20, y: 20 },
+        control: {
+          touchTimer: DRIBBLE.touchPeriod / 2,
+        },
+      },
+    },
+  );
+
+  const after = advanceMatch(match, STILL, TICK);
+  assert.ok(Math.abs(after.players[0].speed - PLAYER_CARRYING.maxSpeed) < 1e-9);
+  assert.ok(Math.abs(after.players[1].speed - PLAYER.maxSpeed) < 1e-9);
 });
 
 test("every player starts on the home place of their role", () => {
@@ -186,6 +457,25 @@ test("bodies are parted inside the match, not only in the module", () => {
     Math.hypot(second.x - first.x, second.y - first.y) >
       (BODY.diameter / 2) * BODY.pushRate * TICK,
   );
+});
+
+test("a one-player match dribbles straight and around a corner", () => {
+  let match = createOnePlayerMatch();
+  let widestGap = 0;
+  for (const actions of [RUNNING_UP, RUNNING_RIGHT])
+    for (let tick = 0; tick < 120; tick += 1) {
+      match = advanceMatch(match, actions, TICK);
+      const player = keyboardPlayer(match);
+      widestGap = Math.max(
+        widestGap,
+        Math.hypot(
+          match.ball.position.x - player.position.x,
+          match.ball.position.y - player.position.y,
+        ),
+      );
+    }
+  assert.ok(widestGap <= DRIBBLE.controlRadius);
+  assert.ok(match.ball.position.x > keyboardPlayer(match).position.x);
 });
 
 test("the keyboard player dribbles the ball up the pitch", () => {

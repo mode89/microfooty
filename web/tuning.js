@@ -5,8 +5,6 @@ import { PITCH } from "./world/pitch.js";
 
 export const PLAYER = Object.freeze({
   maxSpeed: 8,
-  acceleration: 28,
-  braking: 24,
   carryingSpeedFactor: 0.9,
 });
 
@@ -31,12 +29,8 @@ export const BALL = Object.freeze({
 export const DRIBBLE = Object.freeze({
   controlRadius: 1,
   maxTouchHeight: 0.35,
-  minimumRunSpeed: 0.1,
-  touchCooldown: 0.1,
-  sharpTurnAngle: Math.PI / 3,
+  touchPeriod: 1 / 3,
   idealLead: 0.8,
-  maxTouchOutrun: 2,
-  maxTouchSpeedChange: 10,
 });
 
 // A kick reaches exactly as far as a touch, so a ball that cannot be dribbled
@@ -44,7 +38,7 @@ export const DRIBBLE = Object.freeze({
 export const KICK = Object.freeze({
   range: DRIBBLE.controlRadius,
   maximumHeight: DRIBBLE.maxTouchHeight,
-  cooldown: DRIBBLE.touchCooldown,
+  touchDelay: DRIBBLE.touchPeriod,
   maximumCharge: 0.5,
   minimumPower: 9,
   maximumPower: 28,

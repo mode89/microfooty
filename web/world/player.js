@@ -1,4 +1,4 @@
-import { add, dot, length, scale, subtract } from "../math/vec.js";
+import { add, length, scale } from "../math/vec.js";
 import { PLAYER } from "../tuning.js";
 import { keepOnPitch, PITCH_BOUNDS } from "./pitch.js";
 
@@ -22,23 +22,27 @@ export function velocityOf(player) {
   return scale(player.heading, player.speed);
 }
 
-export function advancePlayer(
-  player,
-  direction,
-  seconds,
-  settings = PLAYER,
-  bounds = PITCH_BOUNDS,
-) {
-  const steered = steer(velocityOf(player), direction, seconds, settings);
-  const moved = add(player.position, scale(steered, seconds));
+export function setRun(player, direction, settings = PLAYER) {
+  const velocity = scale(direction, settings.maxSpeed);
+  const speed = length(velocity);
+  return {
+    ...player,
+    heading: speed === 0 ? player.heading : scale(velocity, 1 / speed),
+    speed,
+  };
+}
+
+export function advancePlayer(player, seconds, bounds = PITCH_BOUNDS) {
+  const intended = velocityOf(player);
+  const moved = add(player.position, scale(intended, seconds));
   const velocity = {
-    x: stoppedAtTheLine(moved.x, steered.x, bounds.minX, bounds.maxX),
-    y: stoppedAtTheLine(moved.y, steered.y, bounds.minY, bounds.maxY),
+    x: stoppedAtTheLine(moved.x, intended.x, bounds.minX, bounds.maxX),
+    y: stoppedAtTheLine(moved.y, intended.y, bounds.minY, bounds.maxY),
   };
   const speed = length(velocity);
   return {
+    ...player,
     position: keepOnPitch(moved, bounds),
-    // A stopped run has no heading of its own, so it keeps the one it stopped on.
     heading: speed === 0 ? player.heading : scale(velocity, 1 / speed),
     speed,
   };
@@ -53,23 +57,6 @@ export function directionFromInput(keys) {
   };
   const size = length(held);
   return size === 0 ? held : scale(held, 1 / size);
-}
-
-// Moves the velocity towards the target at a fixed rate without overshooting
-// it. A released direction targets zero, which is the friction that stops the
-// player. Running against the current velocity brakes, running with it
-// accelerates, so a turn is as sharp as a stop.
-function steer(velocity, direction, seconds, settings) {
-  const change = subtract(scale(direction, settings.maxSpeed), velocity);
-  const size = length(change);
-  const released = length(direction) === 0;
-  const againstTheRun = dot(direction, velocity) < 0;
-  const rate =
-    released || againstTheRun ? settings.braking : settings.acceleration;
-  const step = rate * seconds;
-  return size <= step
-    ? add(velocity, change)
-    : add(velocity, scale(change, step / size));
 }
 
 // Running into the touchline kills the speed into it, so a player held there

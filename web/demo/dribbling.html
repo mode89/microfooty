@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Microfooty Dribbling Demo</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        overflow: hidden;
+        background: #123d1a;
+      }
+      canvas {
+        display: block;
+        width: 100%;
+        height: 100%;
+      }
+      p,
+      pre {
+        position: fixed;
+        z-index: 1;
+        top: 0;
+        margin: 12px;
+        padding: 8px 10px;
+        color: white;
+        background: rgb(0 0 0 / 55%);
+        font: 14px sans-serif;
+      }
+      p {
+        left: 0;
+      }
+      pre {
+        right: 0;
+        text-align: right;
+      }
+    </style>
+  </head>
+  <body>
+    <p>Move: arrow keys or WASD · Kick: Space · Reload to reset</p>
+    <pre id="debug"></pre>
+    <canvas id="screen"></canvas>
+    <script type="module" src="./dribbling.js"></script>
+  </body>
+</html>

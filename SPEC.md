@@ -96,8 +96,9 @@ state you can open in a browser and judge. No step depends on a later one.
   same ES modules unchanged. Everything pure is tested: vector maths, ball
   integration, camera follow, player movement, facing selection, kick power.
   Rendering and raw input handling are checked by eye.
-- **Debug overlay** toggled by a key, showing tick rate, frame rate, ball state,
-  and player state. It is a review tool for every step below.
+- **Debug tools** are review-only presentation. The match overlay shows timing
+  and world state; standalone pages under `web/demo/` isolate mechanics such as
+  dribbling. They are not match UI.
 - **Units.** World units are metres. Pitch is 105 × 68 m and vertical: its
   length runs along the `+y` axis, which points down the screen, so the goals
   are at the top and the bottom. Ball height is `z`, positive upwards.
@@ -172,41 +173,34 @@ motion shows no wobble or stepping.
 given size and frame count. (Canvas drawing itself is judged by eye.)
 
 **[DONE] Step 5 — Player movement**
-One player. 8-directional input, acceleration towards a target velocity, a
-maximum speed, and friction on release. The run is held as a heading and a
-speed: input against the heading brakes, input with it accelerates. The heading
-maps to the four sprite frames; upward diagonals pick the up frame and downward
-diagonals the nearest side frame.
-Sprites drawn with the slight vertical squash of the Sensi look.
-*Review:* the player runs in all eight directions at a consistent speed, and the
-sprite frame matches the run, which lags the keys through a turn because the
-heading follows the movement rather than the input.
+One player. 8-directional input sets the run direction and speed at once, and
+releasing it stops at once. The last nonzero direction remains as the heading
+while stopped. The heading maps to the four sprite frames; upward diagonals pick
+the up frame and downward diagonals the nearest side frame. Sprites are drawn
+with the slight vertical squash of the Sensi look.
+*Review:* the player starts, stops and turns immediately, runs in all eight
+directions at a consistent speed, and the sprite frame matches the input.
 *Tests:* diagonal input gives the same top speed as straight input (the input
-vector is normalised); acceleration, braking and stopping reach the expected
-speeds after a known number of ticks; the facing-to-sprite map covers all eight
-directions.
+vector is normalised); starting, stopping and reversing take effect in one
+tick; the facing-to-sprite map covers all eight directions.
 
 **[DONE] Step 6 — Loose-ball dribbling**
-The ball is never attached to the player. When the ball is inside a control
-radius, is low enough, and the player is running, the player touches it towards
-the place it should hold: one lead ahead along the direction of the run, not the
-drawn facing, which has four frames and would knock a diagonal run's ball
-sideways. A cooldown separates touches, except that a sharp turn earns one at
-once, since a ball left rolling where the run used to point is out of reach by
-the time the next touch falls due. A touch sends the ball out at the run's own
-pace and a little over, and may change the ball's velocity only so far, so a
-ball arriving faster than the run is deflected rather than trapped. Carrying the
-ball costs a little top speed, so a loose ball can be chased faster than it can
-be dribbled.
+The ball is never attached to the player. A low ball inside the control radius
+may be touched every 1/3 second. Every change in directional input allows an
+early touch attempt; a successful touch resets the timer. Nonzero input supplies
+the touch direction, while zero input uses the player's last heading. A touch
+sets the ball velocity to carry it in one touch period from its current position
+to the player's position plus the direction multiplied by the player's travel
+over that period and the ideal lead. A recent touch costs a little pace, and the
+ball remains free to run past or intercept.
 *Review:* the player can run the length of the pitch keeping the ball a short
-distance ahead; the ball can be run past and lost; a bouncing ball is not
-controlled until it drops; a corner can be turned without losing the ball.
-*Tests:* no touch happens outside the control radius, above the height limit,
-during the cooldown, below the minimum run speed, or from a standstill; a touch
-never sends the ball out at far more than the run's own speed; touches come one
-cooldown apart, and a sharp turn brings one sooner while a gentle drift does
-not; a run onto a loose ball, a straight dribble and a corner each keep the ball
-inside the control radius.
+distance ahead; starts, stops and turns change the touch at once; the ball can
+be run past and lost; a bouncing ball is not controlled until it drops.
+*Tests:* no touch happens outside the control radius, above the height limit or
+during the player's timer; regular touches come at 3 Hz; each directional input
+change allows one early attempt, and a successful attempt resets the timer; a
+run onto a loose ball, a straight dribble and turns keep the ball inside the
+control radius.
 
 **[DONE] Step 7 — Tap and hold kick**
 One kick button. Charge builds while held, capped at a maximum. Release kicks
@@ -220,7 +214,7 @@ minimum power; power and launch angle are monotonic in charge duration; releasin
 out of range leaves the ball untouched.
 
 **[DONE] Step 8 — Feel pass and cleanup**
-Tune constants: player speed, acceleration, control radius, touch strength,
+Tune constants: player speed, control radius, touch period, ideal lead,
 friction, restitution, kick power range, camera smoothing and lookahead. Collect
 them into one named constants module so tuning is a single place. Remove debug
 keys not worth keeping.
@@ -338,12 +332,13 @@ stay behind attackers for a named set of ball positions, including both goal
 lines and both corners.
 
 **Step 4 — Everyone can play the ball**
-The M1 dribble and kick rules are lifted from one player to twenty-two: at most
-one touch in a tick, taken by the nearest eligible player, with ties broken in
-a fixed order so the result never depends on iteration accident. The keyboard
-still drives the one player it was given at step 1; step 5 makes that choice
-follow the ball. To make the contest worth watching, the nearest player of each team
-chases a loose ball; step 9 replaces that with real roles.
+The M1 touch rules are lifted from one player to twenty-two. Every player has a
+3 Hz timer, but at most one touch happens in a tick: the nearest eligible player
+wins, with ties broken in fixed player order. Only the most recent toucher pays
+the carrying pace penalty, and a successful kick clears that recent touch. The
+keyboard still drives the one player it was given at step 1; step 5 makes that
+choice follow the ball. To make the contest worth watching, the nearest player
+of each team chases a loose ball; step 9 replaces that with real roles.
 *Review:* dribble into a crowd and lose the ball to whoever is closer; an AI
 chaser picks up a loose ball and carries it away; a lone dribble in space still
 feels exactly like M1.
@@ -392,14 +387,14 @@ incoming speed and the player's run, and an elevation that makes a header a
 clearance rather than a pass. A ball above head height passes over untouched.
 Height alone separates this from a dribble touch: the dribble keeps its ceiling
 and the volley starts above it, so no ball is eligible for both. The strike
-starts the same cooldown as a touch, so one flight cannot be struck twice.
+starts the same touch timer as a dribble touch, so one flight cannot be struck twice.
 *Review:* hold a full shot into a crowd: the first player it drops on heads it
 away instead of waiting for it to land, a ball that passes over head height is
 left alone, and a ball rolling in at ankle height is still dribbled.
 *Tests:* a ball below the dribble ceiling is touched and never volleyed; a ball
 above head height is not reachable; the struck ball leaves along the player's
 aim; power rises with the incoming speed; a second strike in the same flight is
-refused by the cooldown.
+refused by the touch timer.
 
 **Step 8 — Goals and the goal frame**
 Posts and crossbar as pitch data, drawn at both ends. The ball rebounds off
