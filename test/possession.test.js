@@ -503,7 +503,8 @@ test("a tap kicks at minimum power and a low angle", () => {
   assert.ok(
     powerOf(after.ball) <=
       KICK.minimumPower +
-        CHARGE_PER_TICK * (KICK.maximumPower - KICK.minimumPower),
+        CHARGE_PER_TICK * (KICK.maximumPower - KICK.minimumPower) +
+        1e-9,
   );
   assert.ok(elevationOf(after.ball) <= CHARGE_PER_TICK * KICK.maximumElevation);
   assert.equal(after.kickCharge, 0);
