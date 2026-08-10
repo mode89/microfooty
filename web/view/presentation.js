@@ -82,6 +82,7 @@ function drawnPlayers({ match, previousMatch, kitSprites }, alpha) {
         alpha,
       ),
       heading: player.heading,
+      selected: index === match.selectedIndex,
       sprites: kitSprites[kitOf(player.team, player.role).name],
     }))
     .sort((behind, infront) => behind.position.y - infront.position.y);

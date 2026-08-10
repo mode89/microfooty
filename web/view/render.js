@@ -81,6 +81,8 @@ export function renderPlayer(context, view, player, sprites) {
   const widthPixels = PLAYER_DRAW.width * view.pixelsPerUnit;
   const heightPixels = widthPixels * PLAYER_DRAW.squash;
 
+  if (player.selected) renderSelectionMarker(context, feet, widthPixels);
+
   context.fillStyle = SHADOW;
   context.beginPath();
   context.ellipse(
@@ -101,6 +103,32 @@ export function renderPlayer(context, view, player, sprites) {
     widthPixels,
     heightPixels,
   );
+}
+
+// A ring underfoot, drawn under the shadow and the body so it reads as paint
+// on the grass rather than a part of the player.
+const MARKER = Object.freeze({
+  colour: "#f4e04a",
+  radiusFraction: 1.3,
+  flattening: 0.4,
+  lineWidthFraction: 0.1,
+});
+
+function renderSelectionMarker(context, feet, widthPixels) {
+  const radiusPixels = (widthPixels / 2) * MARKER.radiusFraction;
+  context.strokeStyle = MARKER.colour;
+  context.lineWidth = widthPixels * MARKER.lineWidthFraction;
+  context.beginPath();
+  context.ellipse(
+    feet.x,
+    feet.y,
+    radiusPixels,
+    radiusPixels * MARKER.flattening,
+    0,
+    0,
+    Math.PI * 2,
+  );
+  context.stroke();
 }
 
 const BALL_DRAW_SCALE = 2;

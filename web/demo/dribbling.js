@@ -10,7 +10,7 @@ import {
 } from "../view/presentation.js";
 import { createBallSprite } from "../view/sprites.js";
 import { createBall } from "../world/ball.js";
-import { createMatch, keyboardPlayer } from "../world/match.js";
+import { createMatch, selectedPlayer } from "../world/match.js";
 import { kitOf } from "../world/team.js";
 
 const canvas = document.getElementById("screen");
@@ -30,7 +30,7 @@ window.addEventListener("resize", fitToWindow);
 fitToWindow();
 
 const fullMatch = createMatch();
-const soloPlayer = keyboardPlayer(fullMatch);
+const soloPlayer = selectedPlayer(fullMatch);
 const playerKit = kitOf(soloPlayer.team, soloPlayer.role);
 const kitSprites = await loadKitSprites("../players.png", [playerKit]);
 
@@ -38,7 +38,7 @@ const soloMatch = {
   ...fullMatch,
   players: [{ ...soloPlayer, position: { x: 0, y: 0 } }],
   ball: createBall({ x: 0, y: DRIBBLE.idealLead }),
-  keyboardIndex: 0,
+  selectedIndex: 0,
   recentToucherIndex: null,
 };
 
@@ -63,7 +63,7 @@ function render(alpha) {
 }
 
 function readoutOf(match) {
-  const player = keyboardPlayer(match);
+  const player = selectedPlayer(match);
   const ballGap = Math.hypot(
     match.ball.position.x - player.position.x,
     match.ball.position.y - player.position.y,

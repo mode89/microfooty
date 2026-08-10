@@ -29,6 +29,9 @@ _Reference context — observed facts and standing conventions for this project,
 - `web/players.png` is 24 × 8 RGBA: three 8 × 8 frames in sheet order down, right, up, not the down, up, right that `SPEC.md` first stated.
 - The shirt in `web/players.png` is striped one pixel wide, `BWBW` on the down and right frames and mirrored to `WBWB` on the up frame, blue `(0, 112, 255)` being the main kit colour and white `(255, 255, 255)` the secondary.
 - Boots in `web/players.png` are `(1, 1, 1)`, one unit off the `(0, 0, 0)` eyes, so a palette swap can reach one without the other. On screen the two are indistinguishable.
+- `advanceBall` gives the same answer whatever the step size: walking a lofted ball 5 s ahead in 0.1 s steps against 1/60 s steps differs by 4.5e-14 m. A prediction walk can be coarsened for speed with no loss of accuracy.
+- Walking the ball 5 s ahead at 1/60 s steps for 22 players costs 0.099 ms a tick against a 16.7 ms budget; 0.1 s steps cost 0.034 ms. Interception is not a performance concern.
+- `web/view/render.js` has no tests: deleting the selection marker outright leaves the whole suite green. Everything drawn is judged by eye in a browser.
 - The ball keeps a velocity vector while a player is a heading plus a speed, and `velocityOf` bridges the two. A player handed to `followCamera`, which reads `focus.velocity`, gives NaN rather than an error.
 - The body push tops out at `BODY.pushRate` × `BODY.diameter` / 2, which is 4 m/s against an 8 m/s run, so a player running at a standing body closes to 0.13 m before it gives way.
 - 22 bodies stacked on one point are still 0.996 m apart after 4000 ticks, and the first tick throws the outermost one 1.4 m, because the pushes of 21 neighbours sum uncapped.
@@ -68,12 +71,17 @@ _Reference context — observed facts and standing conventions for this project,
 - `KICK.maximumPower` in `web/tuning.js` is 28 m/s, which carries 83 m of the 105 m pitch. Why: picked over 24 m/s (63 m), which leaves less than "most of the pitch" as step 7 of `SPEC.md` asks, and 32 m/s (104 m).
 - Every team's `roles` aliases the single `FORMATION_442`, and the field stays despite the duplication. Why: `SPEC.md` §10.1 makes the formation part of team data, and M2 step 3 gives roles a ball-shifted home.
 - The Shift "tackle" binding is gone from `web/input.js` because the plan is single-button controls, while section 3.2 of `SPEC.md` still names a second button for the slide tackle.
+- `web/world/` does not import `web/input.js`: the key-held check in `selection.js` destructures the action names instead. Why: the world would otherwise depend on the input adapter for one list of names.
+- `web/tuning.js` does not import `TICK_SECONDS` from `web/loop.js`, so `INTERCEPTION.stepSeconds` retypes 1/60. Why: tuning depending on the frame loop is the wrong direction. Cost: its comment can only claim the two agree, not guarantee it.
+- Marker and sprite styling stays in `web/view/render.js` rather than `web/tuning.js`. Why: tuning holds feel, not paint.
 - The body push lives in `web/world/bodies.js` as `partBodies`, not under `ai/`. Why: `SPEC.md` §10.2 names no file for it, and it moves bodies rather than deciding anything, so it belongs with the other world rules.
 
 ## Dead Ends
 
 - ✗ A touch that scales the player's velocity by a fixed factor: abandoned. The lead has no equilibrium — it changes by `(f−1)·v·T − ½·a·T²` per touch, so the ball rides the control radius edge and every turn loses it.
 - ✗ A two-zone touch, pushing near the feet and gathering further out: abandoned. The zones are judged on distance alone, so a ball beside or behind the player is also gathered, slows, drifts further behind and is lost.
+- ✗ Aiming a chase by a fixed lead, by ball velocity times travel time, or by iterating that guess three times: all abandoned. Each ignores the 5 m/s² rolling deceleration, so a chase overshoots a ball that is rolling to a stop.
+- ✗ Overloading the kick button to also switch player: abandoned before building. Sensible Soccer has no switch button at all, so automatic selection was tried alone and proved enough.
 - ✗ A 12 m outfield / 6 m keeper shape reach is abandoned. The pitch clamp pinned the keeper to its goal line and cut keeper-defence spacing from 9.45 m to 0.60 m when the ball entered that half.
 
 ## Open Questions
@@ -83,7 +91,8 @@ _Reference context — observed facts and standing conventions for this project,
 
 - ? `BODY.pushRate` is 8, picked without a browser check: a full-speed run still walks through a standing body, and 16 would match run speed. The feel is the user's call.
 - ? Kick-off is not modelled, and both strikers' home places sit 8.0 m from the centre spot, inside the 9.15 m circle, so M3 has to settle what a legal kick-off shape looks like.
-- ? M2 step 4 lacks a browser review: nearest-player chases, AI carrying, and aggregate crowd touches are test-approved, but their play feel is unjudged.
+- ? A 5-tick charge kick taken from behind a ball rolling towards the kicker left the ball 0.7 m away and stopped, where the same charge gives 12.1 m/s elsewhere: unexplained, and possibly a real kick bug.
+- ? The step 5 readability refactor, which moved run directions into `web/ai/roles.js`, is test-approved only: unjudged in a browser.
 - ? The 8 m along-pitch reach lets a team slide 16 m over a 105 m pitch, unjudged in a browser: it may read as stiff, but past about 10 m the defence crowds its own keeper.
 
 # Extra
@@ -93,3 +102,5 @@ _Reference context — observed facts and standing conventions for this project,
 This glossary records project terms whose local meaning is easy to mistake. Entries change when the shared domain language changes.
 
 - **Possession**: Loose-ball play handled by the Possession module. It is not stored ownership; the ball stays loose, and possession emerges from touches.
+- **Selection**: Which single player the keyboard drives. It moves on its own as play moves, and is not a claim on the ball.
+- **Grip**: Whether the human has actually taken over the selected player. Without it the selected player chases the ball on its own.

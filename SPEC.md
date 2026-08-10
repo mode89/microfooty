@@ -272,6 +272,8 @@ web/
   world/formation.js   home position of a role for a given ball position
   world/match.js       the whole match state and one advance step, built at
                        step 1 so later steps add fields instead of reshaping it
+  world/interception.js where and when a player can meet the ball (pure)
+  world/selection.js   which player the keyboard drives (pure)
   world/tackle.js      the slide: lunge, reach, recovery (pure)
   world/volley.js      automatic strike at an airborne ball (pure)
   world/goal.js        goal frame, post rebounds, goal-line crossing (pure)
@@ -347,20 +349,49 @@ takes it; a player who is eligible but not nearest never touches; equal
 distances resolve the same way every run; a match state holding one player
 reproduces the M1 dribble results tick for tick.
 
-**Step 5 — Choosing which player you control**
-Selection follows the ball: while the team is not carrying it, the nearest
-teammate to the ball takes over, with a margin so two near-equal candidates do
-not trade the selection back and forth. A carrier is never switched away from
-automatically. A switch button picks the next-nearest player on demand. The
-keeper is never selected. The selected player is marked underfoot.
+**[DONE] Step 5 — Choosing which player you control**
+Selection follows the ball. A touch by the team settles it outright: the player
+on the ball is the one worth driving, so control goes to the toucher, keeper
+aside. Otherwise the teammate who can meet the ball soonest takes over, with a
+margin in seconds so two near-equal candidates do not trade the selection back
+and forth.
+Soonest is measured, not guessed. The ball's future is walked once a tick with
+the ball's own rules, so bounce, drag and rolling friction need no second model,
+and a player's meeting point is the first point on that walk they can be
+standing at in time. Ties inside one step of the walk go to the shorter run.
+Chasers run at that meeting point rather than at the ball, which is what stops
+a chase trailing a moving ball. A carrier is never switched away from
+automatically. The keeper is never selected. The selected player is marked
+underfoot.
+A kick makes the ball loose at once, so the kicker would lose control on the
+tick it strikes. A hold keeps the selection still for a spell after a kick,
+which leaves the ball time to travel before the team is ranked again. A touch by
+the team outranks that hold, since a teammate on the ball has settled where play
+is going.
+A player handed the selection keeps chasing the ball on its own until the
+keyboard is used, so a switch never strands a player standing in play. Any
+press takes the grip, the kick button included, and releasing the keys keeps
+it: only the next selection hands the player back. The early touch that a
+change of directional input allows belongs to the grip as well, so a player
+chasing on its own earns no free touch from a key released elsewhere.
+There is no switch button. Sensible Soccer had one fire button and picked the
+player for you, so the margin, not a key, is what makes the choice bearable.
+The browser review found the automatic choice enough, so no manual switch was
+added.
 *Review:* the marker sits on the player nearest the ball while you defend, does
-not flicker between two chasers, stays put while you are dribbling, and the
-switch button hands control to another player at once.
-*Tests:* the auto-switch fires only when the team is not carrying; a carrier
-keeps the selection even when a teammate is nearer the ball; the switch margin
-holds the selection for a rival who is nearer by less than the margin; the
-manual switch picks the next-nearest and skips the current player; the keeper
-is never returned.
+not flicker between two chasers, and stays put while you are dribbling.
+*Tests:* the walk follows the ball's own rules and reaches the horizon; a
+meeting point leads a rolling ball, waits for a flighted one to drop, and falls
+back to the end of the walk when the ball outruns the player; a teammate's
+touch takes the selection, and takes it through a running hold; a carrier keeps
+the selection; an opponent's touch and the keeper's touch move nothing; the
+margin holds the selection for a rival who is sooner by less than it; a nearer
+player loses the selection to one the ball is rolling towards; an opponent is
+never returned; the keeper is never returned; an auto-selected player chases
+until the first press, stands still on an empty input once pressed, and is
+handed back to the chase by the next
+selection; a kick holds the selection on the kicker until the hold runs out,
+and hands it on once spent.
 
 **Step 6 — The slide tackle on the kick button**
 No second button: the ball decides what a release means. In kicking range it

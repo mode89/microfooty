@@ -1,3 +1,15 @@
+import { BALL } from "../web/tuning.js";
+
+// A ball standing where it is put, on the ground unless a height is given.
+export function ballAt(position, velocity = { x: 0, y: 0, z: 0 }) {
+  return { position: { ...position, z: position.z ?? BALL.radius }, velocity };
+}
+
+// Only where a player stands: the rules under test read nothing else of them.
+export function playerAt(position) {
+  return { position };
+}
+
 // No key held: the input a tick reads when the player asks for nothing.
 export const STILL = Object.freeze({
   up: false,

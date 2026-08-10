@@ -48,6 +48,7 @@ export function advancePossession(
     ),
     ball: kicked.ball,
     recentToucherIndex: finalToucherIndex,
+    didKick: kicked.didKick,
   };
 }
 

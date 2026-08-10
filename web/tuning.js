@@ -68,6 +68,25 @@ export const SHAPE = Object.freeze({
   }),
 });
 
+// A chase is aimed by walking the ball's future in steps of this size, as far
+// ahead as the horizon. The step is written to match the simulation's tick in
+// `web/loop.js`, which keeps the walk and the match on the same samples; the
+// two are set apart so that tuning the walk cannot slow the match down.
+export const INTERCEPTION = Object.freeze({
+  stepSeconds: 1 / 60,
+  horizonSeconds: 5,
+});
+
+// Control moves to the teammate who can meet the ball soonest, but only once
+// that teammate is quicker by this margin, which is what stops two chasers
+// trading the selection back and forth.
+// The kick itself makes the ball loose, so without a hold the kicker loses the
+// selection on the tick it strikes, before the ball has left its feet.
+export const SELECTION = Object.freeze({
+  switchMargin: 0.25,
+  holdAfterKickSeconds: 0.5,
+});
+
 // A body gives way at a share of the overlap per second, so a crowd opens over
 // a few ticks rather than snapping apart.
 export const BODY = Object.freeze({

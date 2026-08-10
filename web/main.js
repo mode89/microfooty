@@ -1,6 +1,6 @@
 import { startLoop } from "./loop.js";
 import { createInput } from "./input.js";
-import { createMatch, keyboardPlayer } from "./world/match.js";
+import { createMatch, selectedPlayer } from "./world/match.js";
 import { allKits } from "./world/team.js";
 import { createDebugOverlay } from "./view/debug.js";
 import { fitCanvasToWindow } from "./view/canvas.js";
@@ -58,7 +58,7 @@ function render(alpha, wallClockSeconds) {
   drawPresentation(context, screenSize(), presentation, alpha);
 
   if (debugVisible)
-    debug.draw(context, { ball: match.ball, player: keyboardPlayer(match) });
+    debug.draw(context, { ball: match.ball, player: selectedPlayer(match) });
 }
 
 startLoop({ tick, render });
