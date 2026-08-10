@@ -4,7 +4,7 @@ Browser-based, single-player, top-down arcade football prototype inspired by Sen
 
 ## Files
 
-- `SPEC.md` — requirements and scope
+- `SPEC.md` — requirements and scope; keep in sync with the code
 - `web/` — the game: `index.html` plus ES modules, loaded directly, no build step
 - `test/` — Node built-in test runner specs for the pure modules
 - `scripts/serve` — static server for `web/`

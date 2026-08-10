@@ -34,6 +34,7 @@ export function createMatch(teams = TEAMS) {
     keyboardEngaged: false,
     keyboardDirection: STILL,
     recentToucherIndex: null,
+    kickCharge: 0,
   };
 }
 
@@ -52,11 +53,7 @@ export function advanceMatch(match, actions, seconds) {
       : null,
   });
   const possession = advancePossession(
-    {
-      players: match.players,
-      ball: match.ball,
-      recentToucherIndex: match.recentToucherIndex,
-    },
+    possessionStateOf(match, selectedIndex),
     {
       directions,
       earlyToucherIndex:
@@ -85,6 +82,7 @@ export function advanceMatch(match, actions, seconds) {
     keyboardEngaged,
     keyboardDirection,
     recentToucherIndex: possession.recentToucherIndex,
+    kickCharge: possession.kickCharge,
   };
 }
 
@@ -110,4 +108,20 @@ function attackingHeading(team) {
 
 function directionChanged(before, after) {
   return before.x !== after.x || before.y !== after.y;
+}
+
+function possessionStateOf(match, kickingPlayerIndex) {
+  const { players, ball, recentToucherIndex } = match;
+  return {
+    players,
+    ball,
+    recentToucherIndex,
+    kickCharge: chargeKeptOnSelection(match, kickingPlayerIndex),
+  };
+}
+
+// A player just handed the selection never pulled his leg back, so his wind-up
+// starts again from nothing even while the button stays held.
+function chargeKeptOnSelection(match, kickingPlayerIndex) {
+  return kickingPlayerIndex === match.selectedIndex ? match.kickCharge : 0;
 }

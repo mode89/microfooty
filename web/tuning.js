@@ -38,7 +38,7 @@ export const DRIBBLE = Object.freeze({
 export const KICK = Object.freeze({
   range: DRIBBLE.controlRadius,
   maximumHeight: DRIBBLE.maxTouchHeight,
-  touchDelay: DRIBBLE.touchPeriod,
+  retouchDelay: DRIBBLE.touchPeriod,
   maximumCharge: 0.5,
   minimumPower: 9,
   maximumPower: 28,

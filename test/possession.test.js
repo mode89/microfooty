@@ -54,11 +54,12 @@ function play(
     earlyToucherIndex = null,
     kickingPlayerIndex = 0,
     kickHeld = false,
+    kickCharge = 0,
     seconds = TICK,
   } = {},
 ) {
   return advancePossession(
-    { players, ball, recentToucherIndex },
+    { players, ball, recentToucherIndex, kickCharge },
     {
       directions,
       earlyToucherIndex,
@@ -73,22 +74,29 @@ function continuePlay(state, options = {}) {
   return play(state.players, {
     ball: state.ball,
     recentToucherIndex: state.recentToucherIndex,
+    kickCharge: state.kickCharge,
     ...options,
   });
 }
 
-function holdFor(player, ball, heldSeconds) {
-  let held = { players: [player], ball, recentToucherIndex: null };
+function holdFor(players, ball, heldSeconds, options = {}) {
+  let held = {
+    players,
+    ball,
+    recentToucherIndex: null,
+    kickCharge: 0,
+  };
   for (let left = heldSeconds; left > LAST_SLICE; left -= TICK)
     held = continuePlay(held, {
+      ...options,
       kickHeld: true,
       seconds: Math.min(TICK, left),
     });
   return held;
 }
 
-function holdThenRelease(player, ball, heldSeconds) {
-  return continuePlay(holdFor(player, ball, heldSeconds));
+function holdThenRelease(players, ball, heldSeconds) {
+  return continuePlay(holdFor(players, ball, heldSeconds));
 }
 
 function horizontalSpeed(ball) {
@@ -258,35 +266,32 @@ test("a new toucher uses full pace for the touch then returns at carrying pace",
 test("touch happens before kick replaces the ball velocity", () => {
   const players = [
     playerAt({ x: -NEAR_BALL, y: 0 }),
-    playerAt(
-      { x: MID_RANGE, y: 0 },
-      { charge: KICK.maximumCharge / 2 },
-      UP_THE_PITCH,
-    ),
+    playerAt({ x: MID_RANGE, y: 0 }, {}, UP_THE_PITCH),
   ];
 
   const after = play(players, {
     directions: [RIGHT, UP_THE_PITCH],
     kickingPlayerIndex: 1,
+    kickCharge: KICK.maximumCharge / 2,
   });
 
   assert.equal(after.players[0].control.touchTimer, DRIBBLE.touchPeriod);
-  assert.equal(after.players[1].control.touchTimer, KICK.touchDelay);
+  assert.equal(after.players[1].control.retouchTimer, KICK.retouchDelay);
   assert.ok(Math.abs(after.ball.velocity.x) < 1e-9);
   assert.ok(after.ball.velocity.y < 0);
   assert.ok(after.ball.velocity.z > 0);
 });
 
 test("a successful kick clears the recent toucher", () => {
-  const player = playerAt(
-    { x: 0, y: NEAR_BALL },
-    { charge: KICK.maximumCharge / 2 },
-  );
+  const player = playerAt({ x: 0, y: NEAR_BALL });
 
-  const after = play([player], { recentToucherIndex: 0 });
+  const after = play([player], {
+    recentToucherIndex: 0,
+    kickCharge: KICK.maximumCharge / 2,
+  });
 
   assert.equal(after.recentToucherIndex, null);
-  assert.equal(after.players[0].control.touchTimer, KICK.touchDelay);
+  assert.equal(after.players[0].control.retouchTimer, KICK.retouchDelay);
 });
 
 test("a touch uses the exact velocity needed to reach its target", () => {
@@ -486,13 +491,13 @@ test("the charge builds while held and stops at the maximum", () => {
     seconds: KICK.maximumCharge,
   });
 
-  assert.ok(Math.abs(oneTick.players[0].control.charge - TICK) < 1e-9);
-  assert.ok(Math.abs(twoTicks.players[0].control.charge - 2 * TICK) < 1e-9);
-  assert.equal(overheld.players[0].control.charge, KICK.maximumCharge);
+  assert.ok(Math.abs(oneTick.kickCharge - TICK) < 1e-9);
+  assert.ok(Math.abs(twoTicks.kickCharge - 2 * TICK) < 1e-9);
+  assert.equal(overheld.kickCharge, KICK.maximumCharge);
 });
 
 test("a tap kicks at minimum power and a low angle", () => {
-  const after = holdThenRelease(kickingPlayer(), ballAhead(NEAR_BALL), TICK);
+  const after = holdThenRelease([kickingPlayer()], ballAhead(NEAR_BALL), TICK);
 
   assert.ok(powerOf(after.ball) >= KICK.minimumPower);
   assert.ok(
@@ -501,25 +506,23 @@ test("a tap kicks at minimum power and a low angle", () => {
         CHARGE_PER_TICK * (KICK.maximumPower - KICK.minimumPower),
   );
   assert.ok(elevationOf(after.ball) <= CHARGE_PER_TICK * KICK.maximumElevation);
-  assert.equal(after.players[0].control.charge, 0);
-  assert.equal(after.players[0].control.touchTimer, KICK.touchDelay);
+  assert.equal(after.kickCharge, 0);
+  assert.equal(after.players[0].control.retouchTimer, KICK.retouchDelay);
 });
 
 test("holding the button charges without changing the ball", () => {
   const ball = ballAhead(NEAR_BALL);
 
-  const held = holdFor(kickingPlayer(), ball, KICK.maximumCharge);
+  const held = holdFor([kickingPlayer()], ball, KICK.maximumCharge);
 
   assert.deepEqual(held.ball, ball);
   assert.equal(held.recentToucherIndex, null);
-  assert.ok(
-    Math.abs(held.players[0].control.charge - KICK.maximumCharge) < 1e-9,
-  );
+  assert.ok(Math.abs(held.kickCharge - KICK.maximumCharge) < 1e-9);
 });
 
 test("a full hold kicks at maximum power and angle", () => {
   const after = holdThenRelease(
-    kickingPlayer(),
+    [kickingPlayer()],
     ballAhead(NEAR_BALL),
     KICK.maximumCharge,
   );
@@ -534,7 +537,8 @@ test("power and launch angle rise with hold time", () => {
     ...[0.25, 0.5, 0.75, 1].map((part) => part * KICK.maximumCharge),
   ];
   const kicks = holds.map(
-    (held) => holdThenRelease(kickingPlayer(), ballAhead(NEAR_BALL), held).ball,
+    (held) =>
+      holdThenRelease([kickingPlayer()], ballAhead(NEAR_BALL), held).ball,
   );
 
   for (let step = 1; step < kicks.length; step += 1) {
@@ -549,17 +553,17 @@ test("a release outside kick range or height leaves the ball alone", () => {
     ballAhead(KICK.range * 1.01),
     ballAhead(NEAR_BALL, KICK.maximumHeight * 1.01),
   ]) {
-    const after = holdThenRelease(kickingPlayer(), ball, SHORT_HOLD);
+    const after = holdThenRelease([kickingPlayer()], ball, SHORT_HOLD);
 
     assert.deepEqual(after.ball, ball);
-    assert.equal(after.players[0].control.charge, 0);
-    assert.notEqual(after.players[0].control.touchTimer, KICK.touchDelay);
+    assert.equal(after.kickCharge, 0);
+    assert.equal(after.players[0].control.retouchTimer, 0);
   }
 });
 
 test("a missed release spends its charge", () => {
   const missed = holdThenRelease(
-    kickingPlayer(),
+    [kickingPlayer()],
     ballAhead(KICK.range * 1.01),
     SHORT_HOLD,
   );
@@ -567,14 +571,14 @@ test("a missed release spends its charge", () => {
 
   const next = continuePlay(missed, { ball: nearBall });
 
-  assert.equal(missed.players[0].control.charge, 0);
+  assert.equal(missed.kickCharge, 0);
   assert.deepEqual(next.ball, nearBall);
-  assert.notEqual(next.players[0].control.touchTimer, KICK.touchDelay);
+  assert.equal(next.players[0].control.retouchTimer, 0);
 });
 
 test("a stopped player kicks along their last heading", () => {
   const after = holdThenRelease(
-    kickingPlayer({}, DOWN_THE_PITCH),
+    [kickingPlayer({}, DOWN_THE_PITCH)],
     ballAhead(NEAR_BALL),
     SHORT_HOLD,
   );
@@ -584,13 +588,45 @@ test("a stopped player kicks along their last heading", () => {
   assert.ok(Math.abs(after.ball.velocity.x) < 1e-9);
 });
 
+test("a turn on the tick after a kick does not take the ball back", () => {
+  const kicked = holdThenRelease(
+    [kickingPlayer()],
+    ballAhead(NEAR_BALL),
+    KICK.maximumCharge,
+  );
+
+  const turned = continuePlay(kicked, {
+    directions: [RIGHT],
+    earlyToucherIndex: 0,
+  });
+
+  assert.deepEqual(turned.ball.velocity, kicked.ball.velocity);
+  assert.equal(turned.recentToucherIndex, null);
+});
+
+test("the kick spends the charge it is given, whoever is named as kicker", () => {
+  const held = holdFor(
+    [kickingPlayer(), kickingPlayer({}, UP_THE_PITCH)],
+    ballAhead(NEAR_BALL),
+    KICK.maximumCharge,
+    { kickingPlayerIndex: 0 },
+  );
+
+  const kicked = continuePlay(held, { kickingPlayerIndex: 1 });
+
+  assert.ok(Math.abs(powerOf(kicked.ball) - KICK.maximumPower) < 1e-9);
+  assert.ok(kicked.ball.velocity.y < 0);
+  assert.equal(kicked.players[1].control.retouchTimer, KICK.retouchDelay);
+  assert.equal(kicked.players[0].control.retouchTimer, 0);
+});
+
 test("a successful kick starts the touch delay", () => {
-  const kicked = holdThenRelease(kickingPlayer(), ballAhead(NEAR_BALL), TICK);
+  const kicked = holdThenRelease([kickingPlayer()], ballAhead(NEAR_BALL), TICK);
 
   const waiting = continuePlay(kicked);
 
-  assert.equal(kicked.players[0].control.touchTimer, KICK.touchDelay);
-  assert.ok(waiting.players[0].control.touchTimer < KICK.touchDelay);
+  assert.equal(kicked.players[0].control.retouchTimer, KICK.retouchDelay);
+  assert.ok(waiting.players[0].control.retouchTimer < KICK.retouchDelay);
   assert.deepEqual(waiting.ball, kicked.ball);
   assert.equal(waiting.recentToucherIndex, null);
 });

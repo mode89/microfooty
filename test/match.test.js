@@ -14,6 +14,7 @@ import {
   BALL,
   BODY,
   DRIBBLE,
+  KICK,
   PLAYER,
   SELECTION,
   STEERING,
@@ -144,6 +145,7 @@ function advanceSoloMatchWithoutChasing(match, actions, seconds) {
       players: match.players,
       ball: match.ball,
       recentToucherIndex: match.recentToucherIndex,
+      kickCharge: match.kickCharge,
     },
     {
       directions: [direction],
@@ -166,6 +168,7 @@ function advanceSoloMatchWithoutChasing(match, actions, seconds) {
     keyboardEngaged: true,
     keyboardDirection: direction,
     recentToucherIndex: possession.recentToucherIndex,
+    kickCharge: possession.kickCharge,
   };
 }
 
@@ -689,6 +692,44 @@ test("the keyboard player strikes the ball on releasing the button", () => {
   const struck = advanceMatch(charged, RUNNING_UP, TICK).ball;
   assert.ok(groundSpeed(struck) > PLAYER.maxSpeed);
   assert.ok(struck.velocity.y < 0);
+});
+
+test("the wind-up is cleared when the selection moves mid hold", () => {
+  const chasing = {
+    ...createMatch(),
+    ball: {
+      position: { x: 0, y: -5, z: BALL.radius },
+      velocity: { x: 4, y: -6, z: 0 },
+    },
+  };
+  const ticks = 4 * Math.ceil(KICK.maximumCharge / TICK);
+
+  let held = chasing;
+  const seen = new Set([held.selectedIndex]);
+  const switches = [];
+  for (let tick = 0; tick < ticks; tick += 1) {
+    const next = advanceMatch(held, KICKING_UP, TICK);
+    if (next.selectedIndex !== held.selectedIndex)
+      switches.push({
+        before: held.kickCharge,
+        onSwitching: next.kickCharge,
+        after: advanceMatch(next, KICKING_UP, TICK).kickCharge,
+      });
+    seen.add(next.selectedIndex);
+    held = next;
+  }
+
+  assert.ok(seen.size > 1, "the selection must move for this to test anything");
+  assert.ok(
+    switches.some(({ before }) => before > 2 * TICK),
+    "a switch must interrupt a real wind-up for this to test anything",
+  );
+  for (const { onSwitching, after } of switches) {
+    assert.ok(Math.abs(onSwitching - TICK) < 1e-9, "the wind-up was kept");
+    assert.ok(after > onSwitching, "the wind-up did not build again");
+  }
+  for (const player of held.players)
+    assert.equal(player.control.charge, undefined);
 });
 
 test("a kick by a player who has never run goes the way the team attacks", () => {

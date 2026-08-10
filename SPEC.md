@@ -207,7 +207,10 @@ control radius.
 One kick button. Charge builds while held, capped at a maximum. Release kicks
 with power interpolated from the charge: a tap gives a low flat pass, a full
 hold gives a fast rising shot. Launch angle rises with power. The kick fires
-only if the ball is within kicking range at release.
+only if the ball is within kicking range at release. The kicker cannot touch
+the ball again for one touch period, and that lock has no early-touch
+exception, so turning on the tick after a kick cannot take the ball straight
+back.
 *Review:* taps and holds feel clearly different; a full-power shot travels most
 of the pitch; charging with no ball nearby wastes the charge without error.
 *Tests:* charge accumulates and clamps correctly; the tap threshold maps to
@@ -367,7 +370,10 @@ A kick makes the ball loose at once, so the kicker would lose control on the
 tick it strikes. A hold keeps the selection still for a spell after a kick,
 which leaves the ball time to travel before the team is ranked again. A touch by
 the team outranks that hold, since a teammate on the ball has settled where play
-is going.
+is going. The charge belongs to the button, not to a foot, so no wind-up is
+stranded on a player the selection leaves, but the selection moving to another
+player clears it, since that player never pulled his leg back. Holding the
+button on charges the new player from zero.
 A player handed the selection keeps chasing the ball on its own until the
 keyboard is used, so a switch never strands a player standing in play. Any
 press takes the grip, the kick button included, and releasing the keys keeps
