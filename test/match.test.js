@@ -59,6 +59,14 @@ const BALL_UP_THE_PITCH = Object.freeze({ x: 0, y: -20 });
 // end to stay on it.
 const DOWNFIELD = Object.freeze({ x: 0, y: -45 });
 
+// Longer than a kick from one end of the pitch takes to reach a receiver, so a
+// wait for a touch ends rather than running for ever.
+const LONGEST_FLIGHT_TICKS = 600;
+
+// A flight long enough that a freeze holding for it is the rule at work rather
+// than a ball touched again at once.
+const A_SECOND_OF_TICKS = 60;
+
 // Places named players, keyed by their index in the match, and leaves the rest
 // in their formation.
 function placed(match, positions) {
@@ -168,8 +176,16 @@ function advanceSoloMatchWithoutChasing(match, actions, seconds) {
     keyboardEngaged: true,
     keyboardDirection: direction,
     recentToucherIndex: possession.recentToucherIndex,
+    lastTouchTeam: soloLastTouchTeam(match, possession),
     kickCharge: possession.kickCharge,
   };
+}
+
+// The one player of a solo match is the only one who can have touched.
+function soloLastTouchTeam(match, { didKick, recentToucherIndex }) {
+  return didKick || recentToucherIndex !== null
+    ? match.players[0].team
+    : match.lastTouchTeam;
 }
 
 function groundSpeed({ velocity }) {
@@ -462,30 +478,68 @@ function chasingMatch({ engaged, gap = CHASING_GAP }) {
   };
 }
 
-test("a kick keeps the selection with the kicker until the hold runs out", () => {
+test("a kick keeps the selection with the kicker until the ball is touched", () => {
   const charged = play(kickerAndReceiver(), KICKING_UP, 20);
   const kicked = advanceMatch(charged, RUNNING_UP, TICK);
-  assert.equal(kicked.selectionHold, SELECTION.holdAfterKickSeconds);
+  assert.equal(kicked.lastTouchTeam, selectedPlayer(charged).team);
 
-  const holdTicks = Math.round(SELECTION.holdAfterKickSeconds / TICK) - 1;
-  const held = play(kicked, STILL, holdTicks);
+  const { flying, ticks } = advanceUntilTouched(
+    kicked,
+    charged.selectedIndex,
+    LONGEST_FLIGHT_TICKS,
+  );
+  assert.ok(ticks < LONGEST_FLIGHT_TICKS, "the ball was never touched");
+  assert.ok(
+    ticks > A_SECOND_OF_TICKS,
+    "the ball must run for a second untouched for this to test anything",
+  );
   assert.equal(
-    held.selectedIndex,
-    charged.selectedIndex,
-    "the kicker should keep the selection while the hold runs",
+    advanceMatch(flying, STILL, TICK).selectedIndex,
+    flying.recentToucherIndex,
+    "the receiver's touch should end the freeze",
+  );
+});
+
+// Walks a kicked ball to the tick it is touched on, checking on the way that
+// the kicker keeps the selection for the whole flight.
+function advanceUntilTouched(kicked, kickerIndex, limitTicks) {
+  let flying = kicked;
+  let ticks = 0;
+  while (flying.recentToucherIndex === null && ticks < limitTicks) {
+    assert.equal(
+      flying.selectedIndex,
+      kickerIndex,
+      "the kicker should keep the selection while the ball runs",
+    );
+    flying = advanceMatch(flying, STILL, TICK);
+    ticks += 1;
+  }
+  return { flying, ticks };
+}
+
+test("a kick with no touch before it still counts as our team's last touch", () => {
+  const created = createMatch();
+  const wound = changedPlayers(
+    {
+      ...standingBehindTheBall(created),
+      lastTouchTeam: TEAMS[1],
+      kickCharge: KICK.maximumCharge,
+    },
+    {
+      [created.selectedIndex]: { control: { touchTimer: DRIBBLE.touchPeriod } },
+    },
   );
 
-  const spent = play(held, STILL, 5);
-  assert.notEqual(
-    spent.selectedIndex,
-    charged.selectedIndex,
-    "a spent hold should let the ball take the selection again",
-  );
+  const struck = advanceMatch(wound, STILL, TICK);
+
+  assert.equal(struck.recentToucherIndex, null, "no touch should have landed");
+  assert.ok(groundSpeed(struck.ball) > PLAYER.maxSpeed, "no kick was struck");
+  assert.equal(struck.lastTouchTeam, TEAMS[0]);
 });
 
 // The kicker and one teammate alone, the teammate far enough up the pitch that
 // the kicked ball has nearly finished its run before it can be met: no third
-// player is left to touch the ball and end the hold with a touch instead.
+// player is left to touch the ball and take the selection instead.
 function kickerAndReceiver() {
   const created = createMatch();
   const receiverIndex = indexOfTeamRole(created, TEAMS[0], "leftStriker");
@@ -502,21 +556,58 @@ function kickerAndReceiver() {
   };
 }
 
-test("a teammate's touch takes the selection before the kick hold runs out", () => {
+test("a teammate's touch takes the selection back from the kicker", () => {
   const created = createMatch();
   const receiverIndex = indexOfTeamRole(created, TEAMS[0], "leftStriker");
   const kicked = {
     ...placed(created, { [receiverIndex]: { x: 0, y: MID_RANGE } }),
-    selectionHold: SELECTION.holdAfterKickSeconds,
+    lastTouchTeam: TEAMS[0],
   };
 
   // Selection is settled before the touch, so the handover lands on the tick
   // after it.
   const received = play(kicked, STILL, 2);
 
-  assert.ok(received.selectionHold > 0, "the hold should still be running");
   assert.equal(received.recentToucherIndex, receiverIndex);
   assert.equal(received.selectedIndex, receiverIndex);
+});
+
+test("an opponent's touch ends the freeze on our team", () => {
+  const created = createMatch();
+  const opponentIndex = indexOfTeamRole(created, TEAMS[1], "leftStriker");
+  const chaserIndex = indexOfTeamRole(created, TEAMS[0], "leftStriker");
+  const frozen = {
+    ...placed(created, {
+      [opponentIndex]: { x: 0, y: 0 },
+      [chaserIndex]: { x: 0, y: CHASING_GAP },
+      [created.selectedIndex]: OUT_OF_THE_CHASE,
+    }),
+    lastTouchTeam: TEAMS[0],
+  };
+
+  const touched = advanceMatch(frozen, STILL, TICK);
+  assert.equal(
+    touched.selectedIndex,
+    frozen.selectedIndex,
+    "the freeze should hold on the tick the opponent touches",
+  );
+  assert.equal(touched.lastTouchTeam, TEAMS[1]);
+
+  assert.equal(advanceMatch(touched, STILL, TICK).selectedIndex, chaserIndex);
+});
+
+test("our keeper's touch hands him the keyboard", () => {
+  const created = createMatch();
+  const keeperIndex = indexOfTeamRole(created, TEAMS[0], "keeper");
+  const onTheKeeper = withBallAt(
+    created,
+    created.players[keeperIndex].position,
+  );
+
+  const after = play(onTheKeeper, STILL, 2);
+
+  assert.equal(after.recentToucherIndex, keeperIndex);
+  assert.equal(after.selectedIndex, keeperIndex);
 });
 
 test("a chaser runs at where the ball will be, not at where it is", () => {

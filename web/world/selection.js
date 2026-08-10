@@ -1,20 +1,23 @@
-// Control follows the ball rather than sticking to one shirt: a touch, a hold
-// after a kick, the soonest meeting, and the keyboard's own grip on whoever it
-// was last handed.
+// Control follows the ball rather than sticking to one shirt: a touch, a freeze
+// while our own team was the last to touch, the soonest meeting, and the
+// keyboard's own grip on whoever it was last handed.
 import { SELECTION } from "../tuning.js";
-import { interception, soonerThan } from "./interception.js";
+import { interception, soonerThan, soonestToMeet } from "./interception.js";
 
 export function selectPlayer(
-  { players, selectedIndex, recentToucherIndex, selectionHold = 0 },
+  { players, selectedIndex, recentToucherIndex, lastTouchTeam },
   path,
 ) {
-  const toucherIndex = teamToucherIndex(
-    players,
-    selectedIndex,
-    recentToucherIndex,
-  );
-  if (toucherIndex !== null) return toucherIndex;
-  if (selectionHold > 0) return selectedIndex;
+  const ourTeam = players[selectedIndex].team;
+  // A touch outranks the freeze: the freeze leaves a pass in the kicker's
+  // hands, and a teammate on the ball has ended that pass already. The keeper
+  // is included, since only the driven player can kick.
+  if (
+    recentToucherIndex !== null &&
+    players[recentToucherIndex].team === ourTeam
+  )
+    return recentToucherIndex;
+  if (lastTouchTeam === ourTeam) return selectedIndex;
   return soonestTeammate(players, path, selectedIndex);
 }
 
@@ -31,18 +34,15 @@ export function nextKeyboardGrip(
   return nextSelectedIndex === selectedIndex ? keyboardEngaged || held : held;
 }
 
-// A touch outranks the hold: the hold exists to stop the ball being chased
-// before it has travelled, and a teammate on the ball has settled that already.
-function teamToucherIndex(players, selectedIndex, recentToucherIndex) {
-  if (recentToucherIndex === null) return null;
-  const toucher = players[recentToucherIndex];
-  const ours = toucher.team === players[selectedIndex].team;
-  return ours && !toucher.role.keeper ? recentToucherIndex : null;
-}
-
 function soonestTeammate(players, path, selectedIndex) {
   const selected = players[selectedIndex];
-  const rival = soonestOfTeam(players, path, selected);
+  // The keeper is left out here alone: `runDirections` still ranks him in as a
+  // chaser, so he leaves his goal for his own touch and never for the keyboard.
+  const rival = soonestToMeet(
+    players,
+    path,
+    (player) => player.team === selected.team && !player.role.keeper,
+  );
   if (!rival) return selectedIndex;
 
   const held = interception(path, selected);
@@ -52,16 +52,6 @@ function soonestTeammate(players, path, selectedIndex) {
   };
   const takesOver = soonerThan(paidFor, held);
   return takesOver ? rival.index : selectedIndex;
-}
-
-function soonestOfTeam(players, path, selected) {
-  return players.reduce((soonest, player, index) => {
-    if (player.team !== selected.team || player.role.keeper) return soonest;
-    const meeting = interception(path, player);
-    return !soonest || soonerThan(meeting, soonest.meeting)
-      ? { meeting, index }
-      : soonest;
-  }, null);
 }
 
 // `debug` is not play, so the F1 overlay never takes the grip.

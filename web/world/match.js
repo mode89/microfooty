@@ -1,7 +1,6 @@
-// The whole match in one state: twenty-two players, one loose ball, and the
-// selection the keyboard follows.
+// The whole match in one state: twenty-two players, one loose ball, the team of
+// the last touch, and the selection the keyboard follows.
 import { runDirections } from "../ai/roles.js";
-import { SELECTION } from "../tuning.js";
 import { ballPath } from "./interception.js";
 import { nextKeyboardGrip, selectPlayer } from "./selection.js";
 import { advanceBall, createBall } from "./ball.js";
@@ -30,7 +29,9 @@ export function createMatch(teams = TEAMS) {
     players,
     ball,
     selectedIndex,
-    selectionHold: 0,
+    // lastTouchTeam outlives recentToucherIndex: the toucher clears with his
+    // touch timer, the team stands until the next contact.
+    lastTouchTeam: null,
     keyboardEngaged: false,
     keyboardDirection: STILL,
     recentToucherIndex: null,
@@ -40,10 +41,10 @@ export function createMatch(teams = TEAMS) {
 
 export function advanceMatch(match, actions, seconds) {
   const path = ballPath(match.ball);
-  const selectionHold = Math.max(0, match.selectionHold - seconds);
-  const selectedIndex = selectPlayer({ ...match, selectionHold }, path);
+  const selectedIndex = selectPlayer(match, path);
   const keyboardEngaged = nextKeyboardGrip(match, selectedIndex, actions);
   const keyboardDirection = directionFromInput(actions);
+  const kickingPlayerIndex = selectedIndex;
   const directions = runDirections({
     players: match.players,
     ballPosition: match.ball.position,
@@ -53,7 +54,7 @@ export function advanceMatch(match, actions, seconds) {
       : null,
   });
   const possession = advancePossession(
-    possessionStateOf(match, selectedIndex),
+    possessionStateOf(match, kickingPlayerIndex),
     {
       directions,
       earlyToucherIndex:
@@ -61,7 +62,7 @@ export function advanceMatch(match, actions, seconds) {
         directionChanged(match.keyboardDirection, keyboardDirection)
           ? selectedIndex
           : null,
-      kickingPlayerIndex: selectedIndex,
+      kickingPlayerIndex,
       kickHeld: actions.kick,
     },
     seconds,
@@ -76,9 +77,7 @@ export function advanceMatch(match, actions, seconds) {
     players,
     ball: advanceBall(possession.ball, seconds),
     selectedIndex,
-    selectionHold: possession.didKick
-      ? SELECTION.holdAfterKickSeconds
-      : selectionHold,
+    lastTouchTeam: teamOfLastTouch(match, possession, kickingPlayerIndex),
     keyboardEngaged,
     keyboardDirection,
     recentToucherIndex: possession.recentToucherIndex,
@@ -124,4 +123,12 @@ function possessionStateOf(match, kickingPlayerIndex) {
 // starts again from nothing even while the button stays held.
 function chargeKeptOnSelection(match, kickingPlayerIndex) {
   return kickingPlayerIndex === match.selectedIndex ? match.kickCharge : 0;
+}
+
+// A kick is a contact of its own, and it clears the recent toucher on the tick
+// it strikes, so the kicker's team is read straight off the kicker.
+function teamOfLastTouch(match, { didKick, recentToucherIndex }, kickerIndex) {
+  if (didKick) return match.players[kickerIndex].team;
+  if (recentToucherIndex === null) return match.lastTouchTeam;
+  return match.players[recentToucherIndex].team;
 }

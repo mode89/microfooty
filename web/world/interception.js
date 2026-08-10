@@ -43,6 +43,18 @@ export function soonerThan(one, other) {
     : one.seconds < other.seconds;
 }
 
+// The player of those the filter keeps who can meet the ball soonest, with his
+// index, or null when the filter keeps nobody.
+export function soonestToMeet(players, path, keep) {
+  return players.reduce((soonest, player, index) => {
+    if (!keep(player)) return soonest;
+    const meeting = interception(path, player);
+    return !soonest || soonerThan(meeting, soonest.meeting)
+      ? { meeting, index }
+      : soonest;
+  }, null);
+}
+
 function playable({ position, seconds }, gap) {
   return (
     position.z <= DRIBBLE.maxTouchHeight &&

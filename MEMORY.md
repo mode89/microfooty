@@ -37,6 +37,8 @@ _Reference context — observed facts and standing conventions for this project,
 - 22 bodies stacked on one point are still 0.996 m apart after 4000 ticks, and the first tick throws the outermost one 1.4 m, because the pushes of 21 neighbours sum uncapped.
 - The closest pair of formation home positions is 8.4 m apart, so nobody is pushed apart at kick-off.
 - A steering target on or outside the touchline settles still rather than shivering: `advancePlayer` zeroes the velocity on the blocked axis, so the player pins to the line.
+- A dribbler can walk the ball over a line and leave it untouchable for good: `partBodies` clamps players inside the pitch while the ball is not clamped, so it rests about 2 m out against a 1 m `DRIBBLE.controlRadius`.
+- The chase in `web/ai/roles.js` ranks keepers in with no leash, so a keeper can be his team's only chaser and run far from goal. The selection ranking in `web/world/selection.js` leaves keepers out instead.
 - `web/main.js`, `web/demo/dribbling.js`, and `web/sprite-demo.js` are not loaded by `node --test`; broken imports in them surface only in the browser.
 - Every frame of `web/players.png` leaves row 0 and row 7 blank, so the body fills six of the eight rows and looks smaller than its 1.4 m draw width suggests.
 - The background of `web/players.png` is solid magenta `(255, 0, 255)`, which is the transparency key rather than a drawn colour.
@@ -81,6 +83,7 @@ _Reference context — observed facts and standing conventions for this project,
 - ✗ A touch that scales the player's velocity by a fixed factor: abandoned. The lead has no equilibrium — it changes by `(f−1)·v·T − ½·a·T²` per touch, so the ball rides the control radius edge and every turn loses it.
 - ✗ A two-zone touch, pushing near the feet and gathering further out: abandoned. The zones are judged on distance alone, so a ball beside or behind the player is also gathered, slows, drifts further behind and is lost.
 - ✗ Aiming a chase by a fixed lead, by ball velocity times travel time, or by iterating that guess three times: all abandoned. Each ignores the 5 m/s² rolling deceleration, so a chase overshoots a ball that is rolling to a stop.
+- ✗ `SELECTION.holdAfterKickSeconds`, a 0.5 s hold of the selection on the kicker: abandoned. It re-ranked the team mid-flight, so the passer was taken away before his pass landed, and its length was a feel number with nothing to rank it by.
 - ✗ Overloading the kick button to also switch player: abandoned before building. Sensible Soccer has no switch button at all, so automatic selection was tried alone and proved enough.
 - ✗ A 12 m outfield / 6 m keeper shape reach is abandoned. The pitch clamp pinned the keeper to its goal line and cut keeper-defence spacing from 9.45 m to 0.60 m when the ball entered that half.
 
@@ -93,6 +96,8 @@ _Reference context — observed facts and standing conventions for this project,
 - ? Kick-off is not modelled, and both strikers' home places sit 8.0 m from the centre spot, inside the 9.15 m circle, so M3 has to settle what a legal kick-off shape looks like.
 - ? A 5-tick charge kick taken from behind a ball rolling towards the kicker left the ball 0.7 m away and stopped, where the same charge gives 12.1 m/s elsewhere: unexplained, and possibly a real kick bug.
 - ? The step 5 readability refactor, which moved run directions into `web/ai/roles.js`, is test-approved only: unjudged in a browser.
+- ? Whether keeping the passer for the whole flight of a long ball feels dead: unjudged in a browser. The fallback weighed and not built hands the selection to the receiver about a second before the ball arrives.
+- ? Whether the keeper taking the keyboard on his own touch reads well: unjudged in a browser.
 - ? The 8 m along-pitch reach lets a team slide 16 m over a 105 m pitch, unjudged in a browser: it may read as stiff, but past about 10 m the defence crowds its own keeper.
 
 # Extra

@@ -3,7 +3,7 @@
 // outranks both for the player it drives.
 import { directionToward } from "./steering.js";
 import { homePosition } from "../world/formation.js";
-import { interception, soonerThan } from "../world/interception.js";
+import { soonestToMeet } from "../world/interception.js";
 
 export function runDirections({ players, ballPosition, path, keyboardRun }) {
   const chasePoints = chasePointByTeam(players, path);
@@ -18,15 +18,13 @@ export function runDirections({ players, ballPosition, path, keyboardRun }) {
 // One chaser a team, the player who can meet the ball soonest, and the point
 // they run at: chasing where the ball will be is what stops a chase trailing it.
 function chasePointByTeam(players, path) {
-  const soonestByTeam = new Map();
-  players.forEach((player, index) => {
-    const meeting = interception(path, player);
-    const soonest = soonestByTeam.get(player.team);
-    if (!soonest || soonerThan(meeting, soonest))
-      soonestByTeam.set(player.team, { ...meeting, index });
-  });
+  const teams = [...new Set(players.map((player) => player.team))];
+  const chasers = teams.map((team) =>
+    // The keeper chases like anyone else, unlike the keyboard's own ranking.
+    soonestToMeet(players, path, (player) => player.team === team),
+  );
   return new Map(
-    [...soonestByTeam.values()].map(({ index, position }) => [index, position]),
+    chasers.map(({ index, meeting }) => [index, meeting.position]),
   );
 }
 

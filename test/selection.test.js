@@ -34,10 +34,10 @@ function teammate(team, gap, role = OUTFIELD) {
 function selectionFor(
   players,
   ball,
-  { selectedIndex = 0, recentToucherIndex = null, selectionHold = 0 } = {},
+  { selectedIndex = 0, recentToucherIndex = null, lastTouchTeam = null } = {},
 ) {
   return selectPlayer(
-    { players, selectedIndex, recentToucherIndex, selectionHold },
+    { players, selectedIndex, recentToucherIndex, lastTouchTeam },
     ballPath(ball),
   );
 }
@@ -78,7 +78,7 @@ test("a teammate's touch takes the selection", () => {
   );
 });
 
-test("a teammate's touch beats a running hold", () => {
+test("a teammate's touch beats our own team's last touch", () => {
   const holder = teammate(OURS, ON_THE_BALL);
   const toucher = teammate(OURS, LONG_RUN);
   const squad = [holder, toucher];
@@ -86,13 +86,13 @@ test("a teammate's touch beats a running hold", () => {
   assert.equal(
     selectionFor(squad, RESTING_BALL, {
       recentToucherIndex: squad.indexOf(toucher),
-      selectionHold: SELECTION.holdAfterKickSeconds,
+      lastTouchTeam: OURS,
     }),
     squad.indexOf(toucher),
   );
 });
 
-test("the keeper's touch does not hand it the keyboard", () => {
+test("our keeper's touch hands him the keyboard", () => {
   const holder = teammate(OURS, LONG_RUN);
   const keeper = teammate(OURS, ON_THE_BALL, KEEPER);
   const squad = [holder, keeper];
@@ -101,7 +101,21 @@ test("the keeper's touch does not hand it the keyboard", () => {
     selectionFor(squad, RESTING_BALL, {
       recentToucherIndex: squad.indexOf(keeper),
     }),
-    squad.indexOf(holder),
+    squad.indexOf(keeper),
+  );
+});
+
+test("the opposing keeper's touch hands nothing over", () => {
+  const holder = teammate(OURS, LONG_RUN);
+  const nearest = teammate(OURS, ON_THE_BALL);
+  const keeper = teammate(THEIRS, ON_THE_BALL, KEEPER);
+  const squad = [holder, nearest, keeper];
+
+  assert.equal(
+    selectionFor(squad, RESTING_BALL, {
+      recentToucherIndex: squad.indexOf(keeper),
+    }),
+    squad.indexOf(nearest),
   );
 });
 
@@ -135,31 +149,29 @@ test("a teammate sooner by more than the margin takes the selection", () => {
   assert.equal(selectionFor(squad, RESTING_BALL), squad.indexOf(rival));
 });
 
-test("a hold keeps the selection still, whoever meets the ball soonest", () => {
+test("our own last touch keeps the selection still, whoever meets the ball soonest", () => {
   const holder = teammate(OURS, LONG_RUN);
   const nearest = teammate(OURS, ON_THE_BALL);
   const squad = [holder, nearest];
 
   assert.equal(
-    selectionFor(squad, RESTING_BALL, {
-      selectionHold: SELECTION.holdAfterKickSeconds,
-    }),
+    selectionFor(squad, RESTING_BALL, { lastTouchTeam: OURS }),
     squad.indexOf(holder),
   );
 });
 
-test("a spent hold hands the selection on again", () => {
+test("an opponent's last touch hands the selection on again", () => {
   const holder = teammate(OURS, LONG_RUN);
   const nearest = teammate(OURS, ON_THE_BALL);
   const squad = [holder, nearest];
 
   assert.equal(
-    selectionFor(squad, RESTING_BALL, { selectionHold: 0 }),
+    selectionFor(squad, RESTING_BALL, { lastTouchTeam: THEIRS }),
     squad.indexOf(nearest),
   );
 });
 
-test("the keeper is never selected, however near the ball", () => {
+test("the keeper is never ranked in, however near the ball", () => {
   const holder = teammate(OURS, LONG_RUN);
   const keeper = teammate(OURS, ON_THE_BALL, KEEPER);
   const squad = [holder, keeper];

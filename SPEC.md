@@ -354,26 +354,33 @@ reproduces the M1 dribble results tick for tick.
 
 **[DONE] Step 5 — Choosing which player you control**
 Selection follows the ball. A touch by the team settles it outright: the player
-on the ball is the one worth driving, so control goes to the toucher, keeper
-aside. Otherwise the teammate who can meet the ball soonest takes over, with a
-margin in seconds so two near-equal candidates do not trade the selection back
-and forth.
+on the ball is the one worth driving, so control goes to the toucher, the keeper
+included, since only the driven player can kick. Otherwise the teammate who can
+meet the ball soonest takes over, with a margin in seconds so two near-equal
+candidates do not trade the selection back and forth.
 Soonest is measured, not guessed. The ball's future is walked once a tick with
 the ball's own rules, so bounce, drag and rolling friction need no second model,
 and a player's meeting point is the first point on that walk they can be
 standing at in time. Ties inside one step of the walk go to the shorter run.
 Chasers run at that meeting point rather than at the ball, which is what stops
 a chase trailing a moving ball. A carrier is never switched away from
-automatically. The keeper is never selected. The selected player is marked
+automatically. The keeper is never ranked in by the soonest meeting, so he
+leaves his goal for his own touch alone. The selected player is marked
 underfoot.
 A kick makes the ball loose at once, so the kicker would lose control on the
-tick it strikes. A hold keeps the selection still for a spell after a kick,
-which leaves the ball time to travel before the team is ranked again. A touch by
-the team outranks that hold, since a teammate on the ball has settled where play
-is going. The charge belongs to the button, not to a foot, so no wind-up is
-stranded on a player the selection leaves, but the selection moving to another
-player clears it, since that player never pulled his leg back. Holding the
-button on charges the new player from zero.
+tick it strikes. While your own team was the last to touch the ball, the
+selection is frozen where it is, so a pass stays in the kicker's hands and you
+can run him into space. The freeze ends on the next contact: a touch by the team
+outranks it, since a teammate on the ball has settled where play is going, and
+an opponent's touch hands the team back to the ranking. A frozen player is not
+left out of play, because each team sends its soonest player at the ball whether
+or not he is selected, unless the keyboard steers that very player elsewhere.
+A ball nobody can reach, walked over a line, freezes the selection for good;
+that is out of play, which M3 has to settle.
+The charge belongs to the button, not to a foot, so no wind-up is stranded on a
+player the selection leaves, but the selection moving to another player clears
+it, since that player never pulled his leg back. Holding the button on charges
+the new player from zero.
 A player handed the selection keeps chasing the ball on its own until the
 keyboard is used, so a switch never strands a player standing in play. Any
 press takes the grip, the kick button included, and releasing the keys keeps
@@ -389,15 +396,18 @@ not flicker between two chasers, and stays put while you are dribbling.
 *Tests:* the walk follows the ball's own rules and reaches the horizon; a
 meeting point leads a rolling ball, waits for a flighted one to drop, and falls
 back to the end of the walk when the ball outruns the player; a teammate's
-touch takes the selection, and takes it through a running hold; a carrier keeps
-the selection; an opponent's touch and the keeper's touch move nothing; the
+touch takes the selection, and takes it through the freeze; a carrier keeps
+the selection; our keeper's touch takes the selection while an opponent's touch
+and the opposing keeper's touch move nothing; an opponent's touch ends the
+freeze and the ranking picks the team up again; the
 margin holds the selection for a rival who is sooner by less than it; a nearer
 player loses the selection to one the ball is rolling towards; an opponent is
-never returned; the keeper is never returned; an auto-selected player chases
+never returned; the keeper is never ranked in; an auto-selected player chases
 until the first press, stands still on an empty input once pressed, and is
 handed back to the chase by the next
-selection; a kick holds the selection on the kicker until the hold runs out,
-and hands it on once spent.
+selection; a kick keeps the selection on the kicker for the whole flight of the
+ball and the receiver's touch takes it back; a kick with no touch before it
+still counts as the team's last touch.
 
 **Step 6 — The slide tackle on the kick button**
 No second button: the ball decides what a release means. In kicking range it
