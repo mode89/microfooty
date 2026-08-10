@@ -34,7 +34,7 @@ Gravity, ground friction, air drag and bounce. Drawn for now as a plain circle p
 *Tests:* the frame slicer returns the expected source rectangles for a sheet of given size and frame count. (Canvas drawing itself is judged by eye.)
 
 **[DONE] M1.5 — Player movement**
-One player: 8-directional running, a heading that outlives the run, and the heading-to-frame map, drawn with the Sensi vertical squash.
+One player: 8-directional running, a heading that outlives the run, and the heading-to-frame map, drawn at the sprite's true aspect ratio.
 *Review:* the player starts, stops and turns immediately, runs in all eight directions at a consistent speed, and the sprite frame matches the input.
 *Tests:* diagonal input gives the same top speed as straight input (the input vector is normalised); starting, stopping and reversing take effect in one tick; the facing-to-sprite map covers all eight directions.
 

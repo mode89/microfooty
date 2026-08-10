@@ -80,6 +80,7 @@ _Reference context — observed facts and standing conventions for this project,
 - ✗ A two-zone touch, pushing near the feet and gathering further out: abandoned. The zones are judged on distance alone, so a ball beside or behind the player is also gathered, slows, drifts further behind and is lost.
 - ✗ Aiming a chase by a fixed lead, by ball velocity times travel time, or by iterating that guess three times: all abandoned. Each ignores the 5 m/s² rolling deceleration, so a chase overshoots a ball that is rolling to a stop.
 - ✗ `SELECTION.holdAfterKickSeconds`, a 0.5 s hold of the selection on the kicker: abandoned. It re-ranked the team mid-flight, so the passer was taken away before his pass landed, and its length was a feel number with nothing to rank it by.
+- ✗ The Sensi vertical squash, drawing a player sprite 0.85 as tall as it is wide: abandoned. The user asked for true pixel aspect ratio, so a square 8 × 8 frame draws square and the shadow keeps a flattening constant of its own.
 - ✗ Overloading the kick button to also switch player: abandoned before building. Sensible Soccer has no switch button at all, so automatic selection was tried alone and proved enough.
 - ✗ A 12 m outfield / 6 m keeper shape reach is abandoned. The pitch clamp pinned the keeper to its goal line and cut keeper-defence spacing from 9.45 m to 0.60 m when the ball entered that half.
 

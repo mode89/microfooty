@@ -30,7 +30,7 @@ is a browser-based, single-player, top-down arcade football prototype inspired b
 - **Attacking direction is data, not a second code path.** Every rule that points up or down the pitch takes the team's direction, so no rule is written twice for the two ends.
 
 ## 4. Camera & View
-- Top-down view with slight vertical squash on sprites (Sensi look).
+- Top-down view. Sprites are drawn at their true aspect ratio, so a square frame stays square on screen. Shadows are ellipses flattened towards the horizontal.
 - The camera converts world to screen at a fixed zoom given as world-units-per-screen-width, set to 90% of the pitch width, so the pitch fills the same fraction of the screen at any window size. World-to-screen and screen-to-world are inverses.
 - It follows the ball with smoothing plus lookahead along the target's velocity, converges without overshooting, and stays inside a pitch bounds margin.
 - Radar/minimap showing all players.
