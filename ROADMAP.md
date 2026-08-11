@@ -86,15 +86,15 @@ Selection by touch and by soonest meeting, the walked ball prediction, the freez
 *Review:* the marker sits on the player nearest the ball while you defend, does not flicker between two chasers, and stays put while you are dribbling.
 *Tests:* the walk follows the ball's own rules and reaches the horizon; a meeting point leads a rolling ball, waits for a flighted one to drop, and falls back to the end of the walk when the ball outruns the player; a teammate's touch takes the selection, and takes it through the freeze; a carrier keeps the selection; our keeper's touch takes the selection while an opponent's touch and the opposing keeper's touch move nothing; an opponent's touch ends the freeze and the ranking picks the team up again; the margin holds the selection for a rival who is sooner by less than it; a nearer player loses the selection to one the ball is rolling towards; an opponent is never returned; the keeper is never ranked in; an auto-selected player chases until the first press, stands still on an empty input once pressed, and is handed back to the chase by the next selection; a kick keeps the selection on the kicker for the whole flight of the ball and the receiver's touch takes it back; a kick with no touch before it still counts as the team's last touch.
 
-**M2.6 — The slide tackle on the kick button**
-The lunge, its reach, and the recovery, chosen by the ball's distance at release.
-*Review:* you can take the ball off an AI chaser by sliding, and a mistimed slide leaves you on the ground while play runs away from you.
-*Tests:* a release with the ball in kicking range kicks and never slides; a release with the ball beyond the lunge reach leaves the world unchanged; the slide lasts a fixed time, ignores direction input throughout, and its speed falls to zero by the end; a sliding player takes a ball that a standing player could not reach; a player in recovery can neither slide nor run.
-
-**M2.7 — Headers and volleys**
+**M2.6 — Headers and volleys**
 The automatic strike at an airborne ball, above the dribble ceiling and below head height.
 *Review:* hold a full shot into a crowd: the first player it drops on heads it away instead of waiting for it to land, a ball that passes over head height is left alone, and a ball rolling in at ankle height is still dribbled.
 *Tests:* a ball below the dribble ceiling is touched and never volleyed; a ball above head height is not reachable; the struck ball leaves along the player's aim; power rises with the incoming speed; a second strike in the same flight is refused by the touch timer.
+
+**M2.7 — The slide tackle on the kick button**
+The lunge, its reach, and the recovery, chosen by the ball's distance at release.
+*Review:* you can take the ball off an AI chaser by sliding, and a mistimed slide leaves you on the ground while play runs away from you.
+*Tests:* a release with the ball in kicking range kicks and never slides; a release with the ball beyond the lunge reach leaves the world unchanged; the slide lasts a fixed time, ignores direction input throughout, and its speed falls to zero by the end; a sliding player takes a ball that a standing player could not reach; a player in recovery can neither slide nor run.
 
 **M2.8 — Goals and the goal frame**
 Posts and crossbar as pitch data with rebounds, and goal-line crossing tested against the tick's travel segment. The goal is reported once and counted for both teams in the debug overlay, and play carries on.
