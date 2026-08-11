@@ -6,7 +6,7 @@ import { interception, soonerThan, soonestToMeet } from "./interception.js";
 
 export function selectPlayer(
   { players, selectedIndex, recentToucherIndex, lastTouchTeam },
-  path,
+  ballPath,
 ) {
   const ourTeam = players[selectedIndex].team;
   // A touch outranks the freeze: the freeze leaves a pass in the kicker's
@@ -18,7 +18,7 @@ export function selectPlayer(
   )
     return recentToucherIndex;
   if (lastTouchTeam === ourTeam) return selectedIndex;
-  return soonestTeammate(players, path, selectedIndex);
+  return soonestTeammate(players, ballPath, selectedIndex);
 }
 
 // A player handed the selection keeps chasing until the keyboard is actually
@@ -34,18 +34,18 @@ export function nextKeyboardGrip(
   return nextSelectedIndex === selectedIndex ? keyboardEngaged || held : held;
 }
 
-function soonestTeammate(players, path, selectedIndex) {
+function soonestTeammate(players, ballPath, selectedIndex) {
   const selected = players[selectedIndex];
   // The keeper is left out here alone: `runDirections` still ranks him in as a
   // chaser, so he leaves his goal for his own touch and never for the keyboard.
   const rival = soonestToMeet(
     players,
-    path,
+    ballPath,
     (player) => player.team === selected.team && !player.role.keeper,
   );
   if (!rival) return selectedIndex;
 
-  const held = interception(path, selected);
+  const held = interception(ballPath, selected);
   const paidFor = {
     ...rival.meeting,
     seconds: rival.meeting.seconds + SELECTION.switchMargin,

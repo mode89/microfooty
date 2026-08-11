@@ -4,32 +4,32 @@
 import { DRIBBLE, INTERCEPTION, PLAYER } from "../tuning.js";
 import { advanceBall } from "./ball.js";
 
-// One path serves every player in a tick: the ball's future does not depend on
-// who is chasing it.
-export function ballPath(ball, settings = INTERCEPTION) {
+// One ball path serves every player in a tick: the ball's future does not
+// depend on who is chasing it.
+export function predictBallPath(ball, settings = INTERCEPTION) {
   // Floored, so a step that does not divide the horizon stops just inside it
   // rather than just past it.
   const steps = Math.floor(settings.horizonSeconds / settings.stepSeconds);
-  const path = [{ position: ball.position, seconds: 0 }];
+  const ballPath = [{ position: ball.position, seconds: 0 }];
   let rolling = ball;
   for (let step = 1; step <= steps; step += 1) {
     rolling = advanceBall(rolling, settings.stepSeconds);
-    path.push({
+    ballPath.push({
       position: rolling.position,
       seconds: step * settings.stepSeconds,
     });
   }
-  return path;
+  return ballPath;
 }
 
 // The earliest point on the path the player can be standing at in time. A ball
 // that outruns the player gives its last point, which is where the chase ends
 // up anyway, and a time that ranks such a player behind every interceptor.
-export function interception(path, player) {
-  const met = path.find((sample) =>
+export function interception(ballPath, player) {
+  const met = ballPath.find((sample) =>
     playable(sample, groundGap(sample.position, player.position)),
   );
-  const outrun = path[path.length - 1];
+  const outrun = ballPath[ballPath.length - 1];
   const meeting = met ?? outrun;
   return { ...meeting, gap: groundGap(meeting.position, player.position) };
 }
@@ -45,10 +45,10 @@ export function soonerThan(one, other) {
 
 // The player of those the filter keeps who can meet the ball soonest, with his
 // index, or null when the filter keeps nobody.
-export function soonestToMeet(players, path, keep) {
+export function soonestToMeet(players, ballPath, keep) {
   return players.reduce((soonest, player, index) => {
     if (!keep(player)) return soonest;
-    const meeting = interception(path, player);
+    const meeting = interception(ballPath, player);
     return !soonest || soonerThan(meeting, soonest.meeting)
       ? { meeting, index }
       : soonest;

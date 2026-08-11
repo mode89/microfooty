@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { selectPlayer } from "../web/world/selection.js";
-import { ballPath } from "../web/world/interception.js";
+import { predictBallPath } from "../web/world/interception.js";
 import { DRIBBLE, PLAYER, SELECTION } from "../web/tuning.js";
 import { ballAt, playerAt } from "./helpers.js";
 
@@ -38,7 +38,7 @@ function selectionFor(
 ) {
   return selectPlayer(
     { players, selectedIndex, recentToucherIndex, lastTouchTeam },
-    ballPath(ball),
+    predictBallPath(ball),
   );
 }
 

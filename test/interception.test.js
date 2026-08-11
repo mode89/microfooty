@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
-  ballPath,
+  predictBallPath,
   interception,
   soonerThan,
 } from "../web/world/interception.js";
@@ -23,50 +23,50 @@ const LEFT_BEHIND =
 
 test("the path walks the ball with the ball's own rules", () => {
   const ball = ballAt({ x: 0, y: 0 }, { x: 0, y: -8, z: 4 });
-  const path = ballPath(ball);
+  const ballPath = predictBallPath(ball);
 
   let rolled = ball;
   for (let step = 1; step <= 5; step += 1) {
     rolled = advanceBall(rolled, STEP);
-    assert.deepEqual(path[step].position, rolled.position);
-    assert.ok(Math.abs(path[step].seconds - step * STEP) < 1e-9);
+    assert.deepEqual(ballPath[step].position, rolled.position);
+    assert.ok(Math.abs(ballPath[step].seconds - step * STEP) < 1e-9);
   }
 });
 
 test("the path reaches the horizon and starts where the ball stands", () => {
   const ball = ballAt({ x: 1, y: 2 }, { x: 0, y: -8, z: 0 });
-  const path = ballPath(ball);
+  const ballPath = predictBallPath(ball);
 
-  const end = path[path.length - 1].seconds;
-  assert.deepEqual(path[0], { position: ball.position, seconds: 0 });
+  const end = ballPath[ballPath.length - 1].seconds;
+  assert.deepEqual(ballPath[0], { position: ball.position, seconds: 0 });
   assert.ok(end <= INTERCEPTION.horizonSeconds);
   assert.ok(end > INTERCEPTION.horizonSeconds - STEP);
 });
 
 test("a ball already at the player's feet is met at once", () => {
-  const path = ballPath(ballAt({ x: 0, y: 0 }));
-  const met = interception(path, playerAt({ x: 0, y: 0 }));
+  const ballPath = predictBallPath(ballAt({ x: 0, y: 0 }));
+  const met = interception(ballPath, playerAt({ x: 0, y: 0 }));
   assert.equal(met.seconds, 0);
 });
 
 test("meeting a resting ball takes the time the run takes", () => {
   const run = 10;
-  const path = ballPath(ballAt({ x: 0, y: 0 }));
-  const met = interception(path, playerAt({ x: 0, y: run }));
+  const ballPath = predictBallPath(ballAt({ x: 0, y: 0 }));
+  const met = interception(ballPath, playerAt({ x: 0, y: run }));
   const expected = (run - DRIBBLE.controlRadius) / PLAYER.maxSpeed;
   assert.ok(Math.abs(met.seconds - expected) <= STEP);
 });
 
 test("a chase aims ahead of a rolling ball, not at it", () => {
   const ball = ballAt({ x: 0, y: 0 }, { x: 0, y: -8, z: 0 });
-  const met = interception(ballPath(ball), playerAt({ x: 0, y: -20 }));
+  const met = interception(predictBallPath(ball), playerAt({ x: 0, y: -20 }));
   assert.ok(met.seconds > 0);
   assert.ok(met.position.y < ball.position.y);
 });
 
 test("a ball in flight is met where it drops, not under its shadow", () => {
   const ball = ballAt({ x: 0, y: 0, z: DROP_HEIGHT }, { x: 0, y: -10, z: 0 });
-  const met = interception(ballPath(ball), playerAt({ x: 0, y: 0 }));
+  const met = interception(predictBallPath(ball), playerAt({ x: 0, y: 0 }));
   assert.ok(met.position.z <= DRIBBLE.maxTouchHeight);
   assert.ok(met.seconds > 0);
 });
@@ -74,10 +74,10 @@ test("a ball in flight is met where it drops, not under its shadow", () => {
 test("a ball that outruns the player gives the end of its path", () => {
   // Struck flat at full power, straight away from a player left behind.
   const ball = ballAt({ x: 0, y: 0 }, { x: 0, y: -KICK.maximumPower, z: 0 });
-  const path = ballPath(ball);
-  const met = interception(path, playerAt({ x: 0, y: LEFT_BEHIND }));
-  assert.equal(met.seconds, path[path.length - 1].seconds);
-  assert.deepEqual(met.position, path[path.length - 1].position);
+  const ballPath = predictBallPath(ball);
+  const met = interception(ballPath, playerAt({ x: 0, y: LEFT_BEHIND }));
+  assert.equal(met.seconds, ballPath[ballPath.length - 1].seconds);
+  assert.deepEqual(met.position, ballPath[ballPath.length - 1].position);
 });
 
 test("the same tick is ranked by the shorter run", () => {

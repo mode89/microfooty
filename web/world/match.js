@@ -1,7 +1,7 @@
 // The whole match in one state: twenty-two players, one loose ball, the team of
 // the last touch, and the selection the keyboard follows.
 import { runDirections } from "../ai/roles.js";
-import { ballPath } from "./interception.js";
+import { predictBallPath } from "./interception.js";
 import { nextKeyboardGrip, selectPlayer } from "./selection.js";
 import { advanceBall, createBall } from "./ball.js";
 import { partBodies } from "./bodies.js";
@@ -40,15 +40,15 @@ export function createMatch(teams = TEAMS) {
 }
 
 export function advanceMatch(match, actions, seconds) {
-  const path = ballPath(match.ball);
-  const selectedIndex = selectPlayer(match, path);
+  const ballPath = predictBallPath(match.ball);
+  const selectedIndex = selectPlayer(match, ballPath);
   const keyboardEngaged = nextKeyboardGrip(match, selectedIndex, actions);
   const keyboardDirection = directionFromInput(actions);
   const kickingPlayerIndex = selectedIndex;
   const directions = runDirections({
     players: match.players,
     ballPosition: match.ball.position,
-    path,
+    ballPath,
     keyboardRun: keyboardEngaged
       ? { index: selectedIndex, direction: keyboardDirection }
       : null,
