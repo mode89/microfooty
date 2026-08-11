@@ -4,14 +4,17 @@
 import { directionToward } from "./steering.js";
 import { homePosition } from "../world/formation.js";
 import { soonestToMeet } from "../world/interception.js";
+import { CHASE_STEERING } from "../tuning.js";
 
 export function runDirections({ players, ballPosition, path, keyboardRun }) {
   const chasePoints = chasePointByTeam(players, path);
   return players.map((player, index) => {
     if (keyboardRun && index === keyboardRun.index)
       return keyboardRun.direction;
-    const target = chasePoints.get(index) ?? home(player, ballPosition);
-    return directionToward(player.position, target);
+    const chasePoint = chasePoints.get(index);
+    return chasePoint
+      ? directionToward(player.position, chasePoint, CHASE_STEERING)
+      : directionToward(player.position, home(player, ballPosition));
   });
 }
 

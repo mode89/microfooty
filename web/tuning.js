@@ -53,6 +53,14 @@ export const STEERING = Object.freeze({
   slowingDistance: 2,
 });
 
+// A chase never eases off, because the ball is still moving when the chaser
+// gets there: braking into the meeting point is what leaves a chaser short of
+// the ball by centimetres and hands the chase to a player far behind.
+export const CHASE_STEERING = Object.freeze({
+  ...STEERING,
+  slowingDistance: 0,
+});
+
 // A team slides with the ball rather than standing in fixed places. One reach
 // serves all ten outfielders, so they slide as one block and the lines keep
 // their spacing; the keeper is held on a shorter rein. A reach caps a slide

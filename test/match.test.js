@@ -101,6 +101,21 @@ function standingBehindTheBall(match) {
   });
 }
 
+// Every rival stranded behind the ball by more than they can run in the test,
+// so what the keyboard does with the ball is not decided by a defender who
+// wins it first.
+function withoutRivals(match) {
+  const ours = match.players[match.selectedIndex].team;
+  return {
+    ...match,
+    players: match.players.map((player) =>
+      player.team === ours
+        ? player
+        : { ...player, position: { ...player.position, y: STRANDED_GAP } },
+    ),
+  };
+}
+
 function withBallAt(match, { x, y }) {
   return {
     ...match,
@@ -457,6 +472,22 @@ test("the nearest player of each team chases the loose ball", () => {
   );
 });
 
+test("a chaser holds full pace inside the slowing distance", () => {
+  const created = createMatch();
+  const chaserIndex = indexOfTeamRole(created, TEAMS[0], "leftStriker");
+  const match = withBallUntouchableFor(
+    placed(created, {
+      [chaserIndex]: { x: 0, y: STEERING.slowingDistance / 2 },
+      [indexOfTeamRole(created, TEAMS[0], "rightStriker")]: OUT_OF_THE_CHASE,
+    }),
+    1,
+  );
+
+  const after = play(match, STILL, 1);
+
+  assert.equal(after.players[chaserIndex].speed, PLAYER.maxSpeed);
+});
+
 test("the selection moves to the player who meets the loose ball soonest", () => {
   const { match, chaserIndexes } = looseBallChase();
   const after = play(match, STILL, 1);
@@ -767,7 +798,11 @@ test("team chase selection leaves a solo M1 dribble unchanged", () => {
 });
 
 test("the keyboard player dribbles the ball up the pitch", () => {
-  const match = play(standingBehindTheBall(createMatch()), RUNNING_UP, 60);
+  const match = play(
+    withoutRivals(standingBehindTheBall(createMatch())),
+    RUNNING_UP,
+    60,
+  );
   const gap = Math.hypot(
     match.ball.position.x - selectedPlayer(match).position.x,
     match.ball.position.y - selectedPlayer(match).position.y,
@@ -777,7 +812,11 @@ test("the keyboard player dribbles the ball up the pitch", () => {
 });
 
 test("the keyboard player strikes the ball on releasing the button", () => {
-  const charged = play(standingBehindTheBall(createMatch()), KICKING_UP, 60);
+  const charged = play(
+    withoutRivals(standingBehindTheBall(createMatch())),
+    KICKING_UP,
+    60,
+  );
   assert.ok(groundSpeed(charged.ball) < PLAYER.maxSpeed);
 
   const struck = advanceMatch(charged, RUNNING_UP, TICK).ball;
