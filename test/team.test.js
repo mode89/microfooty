@@ -1,7 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { TEAMS, allKits, kitOf } from "../web/world/team.js";
-import { FORMATION_442 } from "../web/world/formation.js";
+import { FORMATION_442, TEAMS, allKits, kitOf } from "../web/team.js";
 
 const [rovers, athletic] = TEAMS;
 const keeper = FORMATION_442.find((role) => role.keeper);

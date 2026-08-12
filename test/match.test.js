@@ -1,15 +1,14 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { advanceMatch, createMatch, selectedPlayer } from "../web/match.js";
+import { advanceBall } from "../web/ball.js";
+import { homePosition } from "../web/team.js";
 import {
-  advanceMatch,
-  createMatch,
-  selectedPlayer,
-} from "../web/world/match.js";
-import { advanceBall } from "../web/world/ball.js";
-import { homePosition } from "../web/world/formation.js";
-import { advancePlayer, directionFromInput } from "../web/world/player.js";
-import { advancePossession } from "../web/world/possession.js";
-import { TEAMS } from "../web/world/team.js";
+  advancePlayer,
+  advancePossession,
+  directionFromInput,
+} from "../web/player.js";
+import { TEAMS } from "../web/team.js";
 import {
   BALL,
   BODY,

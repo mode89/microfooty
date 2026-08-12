@@ -2,16 +2,11 @@
 // between teammates, so the selection hand-over after a pass is easy to read.
 import { createInput } from "../input.js";
 import { startLoop } from "../loop.js";
-import { loadKitSprites } from "../view/kits.js";
 import { fitCanvasToWindow } from "../view/canvas.js";
-import {
-  advancePresentation,
-  createPresentation,
-  drawPresentation,
-} from "../view/presentation.js";
-import { createBallSprite } from "../view/sprites.js";
-import { createMatch, selectedPlayer } from "../world/match.js";
-import { TEAMS, allKits } from "../world/team.js";
+import { advanceScene, createScene, drawScene } from "../view/scene.js";
+import { createBallSprite, loadKitSprites } from "../view/sprites.js";
+import { createMatch, selectedPlayer } from "../match.js";
+import { TEAMS, allKits } from "../team.js";
 
 const HUMAN_TEAM = TEAMS.slice(0, 1);
 
@@ -33,24 +28,19 @@ fitToWindow();
 
 const kitSprites = await loadKitSprites("../players.png", allKits(HUMAN_TEAM));
 
-let presentation = createPresentation({
+let scene = createScene({
   match: createMatch(HUMAN_TEAM),
   ballSprite: createBallSprite(),
   kitSprites,
 });
 
 function tick(seconds) {
-  presentation = advancePresentation(
-    presentation,
-    screenSize(),
-    input.read(),
-    seconds,
-  );
+  scene = advanceScene(scene, screenSize(), input.read(), seconds);
 }
 
 function render(alpha) {
-  debug.textContent = readoutOf(presentation.match);
-  drawPresentation(context, screenSize(), presentation, alpha);
+  debug.textContent = readoutOf(scene.match);
+  drawScene(context, screenSize(), scene, alpha);
 }
 
 function readoutOf(match) {

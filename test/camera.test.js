@@ -10,7 +10,7 @@ import {
   screenToWorld,
   worldToScreen,
 } from "../web/view/camera.js";
-import { PITCH, PITCH_BOUNDS, PITCH_MARKINGS } from "../web/world/pitch.js";
+import { PITCH, PITCH_BOUNDS, PITCH_MARKINGS } from "../web/pitch.js";
 
 const TICK = 1 / 60;
 

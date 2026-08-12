@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { BALL } from "../web/tuning.js";
-import { advanceBall, createBall, launchBall } from "../web/world/ball.js";
+import { advanceBall, createBall, launchBall } from "../web/ball.js";
 
 const TICK = 1 / 60;
 

@@ -1,17 +1,12 @@
 import { createInput } from "../input.js";
 import { startLoop } from "../loop.js";
 import { DRIBBLE } from "../tuning.js";
-import { loadKitSprites } from "../view/kits.js";
 import { fitCanvasToWindow } from "../view/canvas.js";
-import {
-  advancePresentation,
-  createPresentation,
-  drawPresentation,
-} from "../view/presentation.js";
-import { createBallSprite } from "../view/sprites.js";
-import { createBall } from "../world/ball.js";
-import { createMatch, selectedPlayer } from "../world/match.js";
-import { kitOf } from "../world/team.js";
+import { advanceScene, createScene, drawScene } from "../view/scene.js";
+import { createBallSprite, loadKitSprites } from "../view/sprites.js";
+import { createBall } from "../ball.js";
+import { createMatch, selectedPlayer } from "../match.js";
+import { kitOf } from "../team.js";
 
 const canvas = document.getElementById("screen");
 const context = canvas.getContext("2d");
@@ -42,24 +37,19 @@ const soloMatch = {
   recentToucherIndex: null,
 };
 
-let presentation = createPresentation({
+let scene = createScene({
   match: soloMatch,
   ballSprite: createBallSprite(),
   kitSprites,
 });
 
 function tick(seconds) {
-  presentation = advancePresentation(
-    presentation,
-    screenSize(),
-    input.read(),
-    seconds,
-  );
+  scene = advanceScene(scene, screenSize(), input.read(), seconds);
 }
 
 function render(alpha) {
-  debug.textContent = readoutOf(presentation.match);
-  drawPresentation(context, screenSize(), presentation, alpha);
+  debug.textContent = readoutOf(scene.match);
+  drawScene(context, screenSize(), scene, alpha);
 }
 
 function readoutOf(match) {

@@ -1,7 +1,7 @@
 // Every constant that is judged by feel rather than derived from the rules of
 // the game, gathered so that tuning a session is one file. Pitch dimensions,
 // sprite sizes and key bindings are not here: they are given, not tuned.
-import { PITCH } from "./world/pitch.js";
+import { PITCH } from "./pitch.js";
 
 export const PLAYER = Object.freeze({
   maxSpeed: 8,

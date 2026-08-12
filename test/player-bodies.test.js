@@ -1,8 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { partBodies } from "../web/world/bodies.js";
-import { createPlayer } from "../web/world/player.js";
-import { PITCH_BOUNDS } from "../web/world/pitch.js";
+import { createPlayer, partBodies } from "../web/player.js";
+import { PITCH_BOUNDS } from "../web/pitch.js";
 import { BODY } from "../web/tuning.js";
 
 const TICK = 1 / 60;

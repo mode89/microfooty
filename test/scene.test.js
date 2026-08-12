@@ -8,14 +8,10 @@ import {
   createView,
   followCamera,
 } from "../web/view/camera.js";
-import {
-  advancePresentation,
-  createPresentation,
-  drawPresentation,
-} from "../web/view/presentation.js";
-import { advanceMatch, createMatch } from "../web/world/match.js";
-import { PITCH_BOUNDS } from "../web/world/pitch.js";
-import { kitOf } from "../web/world/team.js";
+import { advanceScene, createScene, drawScene } from "../web/view/scene.js";
+import { advanceMatch, createMatch } from "../web/match.js";
+import { PITCH_BOUNDS } from "../web/pitch.js";
+import { kitOf } from "../web/team.js";
 import { STILL } from "./helpers.js";
 
 const SCREEN = Object.freeze({ width: 1280, height: 720 });
@@ -63,14 +59,9 @@ function kitSpritesFor(players) {
   );
 }
 
-function presentationOf({
-  match,
-  previousMatch = match,
-  camera,
-  previousCamera,
-}) {
+function sceneOf({ match, previousMatch = match, camera, previousCamera }) {
   return {
-    ...createPresentation({
+    ...createScene({
       match,
       camera,
       ballSprite: BALL_SPRITE,
@@ -82,7 +73,7 @@ function presentationOf({
 }
 
 function startedFrom(match) {
-  return createPresentation({
+  return createScene({
     match,
     ballSprite: BALL_SPRITE,
     kitSprites: {},
@@ -109,9 +100,9 @@ function recordingContext() {
   };
 }
 
-function drawStill(presentation, alpha = 0) {
+function drawStill(scene, alpha = 0) {
   const context = recordingContext();
-  drawPresentation(context, SCREEN, presentation, alpha);
+  drawScene(context, SCREEN, scene, alpha);
   return context.calls;
 }
 
@@ -138,7 +129,7 @@ function closeTo(actual, expected, tolerance = 1e-9) {
 
 test("the pitch is drawn before the ball, and the ball under every player", () => {
   const calls = drawStill(
-    presentationOf({
+    sceneOf({
       match: matchOf(
         [player({ x: 0, y: -5 }, "one"), player({ x: 0, y: 5 }, "two")],
         { x: 0, y: 0, z: 0 },
@@ -154,7 +145,7 @@ test("the pitch is drawn before the ball, and the ball under every player", () =
 
 test("players are drawn up the pitch, so a nearer body covers a farther one", () => {
   const calls = drawStill(
-    presentationOf({
+    sceneOf({
       match: matchOf(
         [
           player({ x: 0, y: 8 }, "nearest"),
@@ -182,7 +173,7 @@ test("a player wears the kit of their team and role", () => {
   };
 
   const calls = drawStill(
-    presentationOf({ match: matchOf([keeper], { x: 0, y: 20, z: 0 }) }),
+    sceneOf({ match: matchOf([keeper], { x: 0, y: 20, z: 0 }) }),
   );
 
   assert.deepEqual(drawnSprites(calls), ["ball", "keeper"]);
@@ -198,7 +189,7 @@ test("players are sorted on where they are drawn, not on where they end the tick
     { x: 0, y: 0, z: 0 },
   );
 
-  const calls = drawStill(presentationOf({ match, previousMatch }), 0.25);
+  const calls = drawStill(sceneOf({ match, previousMatch }), 0.25);
 
   assert.deepEqual(drawnSprites(calls), ["ball", "one", "two"]);
 });
@@ -214,11 +205,11 @@ test("a player is drawn between its two match positions", () => {
     y: 0,
     z: 0,
   });
-  const presentation = presentationOf({ match, previousMatch });
+  const scene = sceneOf({ match, previousMatch });
 
-  const from = drawnAt(drawStill(presentation, 0), "one");
-  const to = drawnAt(drawStill(presentation, 1), "one");
-  const half = drawnAt(drawStill(presentation, 0.5), "one");
+  const from = drawnAt(drawStill(scene, 0), "one");
+  const to = drawnAt(drawStill(scene, 1), "one");
+  const half = drawnAt(drawStill(scene, 0.5), "one");
 
   assert.ok(Math.abs(from.x - to.x) > 1);
   closeTo(half.x, (from.x + to.x) / 2);
@@ -228,11 +219,11 @@ test("a player is drawn between its two match positions", () => {
 test("the ball is drawn between its two match positions, height included", () => {
   const previousMatch = matchOf([], { x: -8, y: -6, z: 0 });
   const match = matchOf([], { x: 8, y: 6, z: 4 });
-  const presentation = presentationOf({ match, previousMatch });
+  const scene = sceneOf({ match, previousMatch });
 
-  const from = drawnAt(drawStill(presentation, 0), "ball");
-  const to = drawnAt(drawStill(presentation, 1), "ball");
-  const half = drawnAt(drawStill(presentation, 0.5), "ball");
+  const from = drawnAt(drawStill(scene, 0), "ball");
+  const to = drawnAt(drawStill(scene, 1), "ball");
+  const half = drawnAt(drawStill(scene, 0.5), "ball");
 
   assert.ok(Math.abs(from.y - to.y) > 1);
   closeTo(half.x, (from.x + to.x) / 2);
@@ -241,15 +232,15 @@ test("the ball is drawn between its two match positions, height included", () =>
 
 test("the view centre is drawn between the two camera centres", () => {
   const match = matchOf([], { x: 0, y: 0, z: 0 });
-  const presentation = presentationOf({
+  const scene = sceneOf({
     match,
     previousCamera: createCamera({ x: 0, y: -20 }),
     camera: createCamera({ x: 0, y: 20 }),
   });
 
-  const from = drawnAt(drawStill(presentation, 0), "ball");
-  const to = drawnAt(drawStill(presentation, 1), "ball");
-  const half = drawnAt(drawStill(presentation, 0.5), "ball");
+  const from = drawnAt(drawStill(scene, 0), "ball");
+  const to = drawnAt(drawStill(scene, 1), "ball");
+  const half = drawnAt(drawStill(scene, 0.5), "ball");
 
   assert.ok(Math.abs(from.y - to.y) > 1);
   closeTo(half.y, (from.y + to.y) / 2);
@@ -257,8 +248,8 @@ test("the view centre is drawn between the two camera centres", () => {
 
 test("a tick advances the match once and keeps the one before it", () => {
   const match = matchWithMovingBall();
-  const first = advancePresentation(startedFrom(match), SCREEN, STILL, TICK);
-  const second = advancePresentation(first, SCREEN, STILL, TICK);
+  const first = advanceScene(startedFrom(match), SCREEN, STILL, TICK);
+  const second = advanceScene(first, SCREEN, STILL, TICK);
 
   assert.equal(first.previousMatch, match);
   assert.deepEqual(first.match, advanceMatch(match, STILL, TICK));
@@ -269,7 +260,7 @@ test("a tick advances the match once and keeps the one before it", () => {
 test("a tick follows and clamps the camera once, and keeps the one before it", () => {
   const start = startedFrom(matchWithMovingBall());
 
-  const ticked = advancePresentation(start, SCREEN, STILL, TICK);
+  const ticked = advanceScene(start, SCREEN, STILL, TICK);
 
   const view = createView(createCamera(), SCREEN.width, SCREEN.height);
   const once = clampCamera(
@@ -279,7 +270,7 @@ test("a tick follows and clamps the camera once, and keeps the one before it", (
   assert.deepEqual(ticked.camera, once);
   assert.equal(ticked.previousCamera, start.camera);
 
-  const twice = advancePresentation(ticked, SCREEN, STILL, TICK);
+  const twice = advanceScene(ticked, SCREEN, STILL, TICK);
   assert.equal(twice.previousCamera, ticked.camera);
   assert.notDeepEqual(twice.previousCamera, start.camera);
 });
@@ -287,17 +278,17 @@ test("a tick follows and clamps the camera once, and keeps the one before it", (
 test("the camera follows the ball to the end of the pitch, and no further", () => {
   const full = createMatch();
   const beyondTheGoalLine = { x: 0, y: PITCH_BOUNDS.maxY * 2, z: 0 };
-  let presentation = startedFrom({
+  let scene = startedFrom({
     ...full,
     ball: { ...full.ball, position: beyondTheGoalLine },
   });
 
   for (let tick = 0; tick < SETTLED_TICKS; tick += 1)
-    presentation = advancePresentation(presentation, SCREEN, STILL, TICK);
+    scene = advanceScene(scene, SCREEN, STILL, TICK);
 
   const view = createView(createCamera(), SCREEN.width, SCREEN.height);
   closeTo(
-    presentation.camera.centre.y,
+    scene.camera.centre.y,
     PITCH_BOUNDS.maxY + CAMERA.boundsMargin - view.worldHalfHeight,
   );
 });

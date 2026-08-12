@@ -1,13 +1,13 @@
 # Microfooty
 
-This is the primary description of the game: its scope, rules and mechanics. The delivery plan — milestones, steps, review and test criteria — lives in `ROADMAP.md`.
+This is the primary description of the game: its scope, rules and mechanics.
 
 ## 1. Overview
 **Microfooty**
 is a browser-based, single-player, top-down arcade football prototype inspired by Sensible Soccer '93. One playable match vs AI. HTML5 Canvas 2D, plain JavaScript (ES modules, no build step), no engine. Pixel art is used as a texture style only; presentation is continuous (no logical pixel grid).
 
 ## 2. Platform & Technical
-- **Target:** Modern desktop browsers, keyboard input. A gamepad is wanted, but no milestone owns it yet.
+- **Target:** Modern desktop browsers, keyboard input, possibly gamepad.
 - **Rendering:** Canvas 2D, continuous presentation:
   - A full-window canvas that survives resizing and high-DPI displays.
   - World simulated and rendered in floating-point coordinates; no position snapping or logical resolution.
@@ -20,7 +20,6 @@ is a browser-based, single-player, top-down arcade football prototype inspired b
 - **Simulation is pure, presentation is not.** Simulation modules take state and input and return new state. They never touch the canvas, the DOM, the clock, or `Math.random`. This is what makes them testable.
 - **The AI is deterministic.** Decisions are pure functions of the match state, with no clock and no `Math.random`, which is what makes them testable.
 - **Tests** use the Node built-in test runner (`node --test`), which loads the same ES modules unchanged. Everything pure is tested: vector maths, ball integration, camera follow, player movement, facing selection, kick power. Rendering and raw input handling are checked by eye. Test state is built by small factory helpers that place only the players a test cares about.
-- **Debug tools** are review-only presentation. The match overlay shows timing and world state; standalone pages under `web/demo/` isolate mechanics such as dribbling. They are not match UI.
 
 ## 3. Units, Pitch & Sides
 - World units are metres. The pitch is 105 × 68 m and vertical: its length runs along the `+y` axis, which points down the screen, so the goals are at the top and the bottom. Ball height is `z`, positive upwards.
@@ -123,8 +122,43 @@ is a browser-based, single-player, top-down arcade football prototype inspired b
 - HUD: score + clock. Text banners (GOAL!, half time, full time), same visual style.
 - No menus: game boots straight into the match; "play again" prompt at full time.
 
-## 12. Tuning
-Feel constants live in one module, `web/tuning.js`, so tuning is a single place: player speed, carrying speed factor, control radius, touch period, ideal lead, friction, restitution, kick power range, camera smoothing and lookahead, shape shift, arrival band, separation push, interception walk step and horizon, switch margin, lunge reach and recovery, header power, pressing and shooting distances, keeper reach and hold.
+## 12. File Layout
+One file per domain thing, flat by default. A folder is only created when several files answer the same question.
+
+The purity seam is a rule, not a folder. Only `main.js`, `loop.js`, `input.js`, `view/*` and `demo/*` may touch the canvas, the DOM, the clock or `Math.random`; every other module takes state and returns state. Each spec in `test/` is named after the module it covers, with an aspect suffix when one module needs several, so `player.js` is covered by `player.test.js` and its `player-*.test.js` siblings.
+
+```
+web/
+  index.html
+  main.js          # boots the game and wires input, simulation and view together
+  loop.js          # the fixed-timestep clock behind every tick and every frame
+  match.js         # advances the whole world one tick, and runs match structure
+  math.js          # vector and geometry primitives
+  pitch.js         # the playing surface: its shape, its markings and its goals
+  ball.js          # how the ball moves, and where it will be later
+  player.js        # everything a player can do
+  team.js          # a side as data: identity, kit, direction and shape
+  selection.js     # which player the keyboard drives
+  tuning.js        # the numbers that decide how the game feels
+  ai/
+    chase.js       # who goes to the ball
+    off-ball.js    # picks a run for every player: keyboard, then chaser, then home
+    on-ball.js     # what a carrier decides to do
+    passing.js     # judging a pass and choosing its target
+    keeper.js      # how a goalkeeper plays
+  input.js         # raw devices reduced to an intent
+  view/
+    scene.js       # holds the world steady while frames are drawn from it
+    canvas.js      # the drawing surface and its fit to the window
+    camera.js      # what part of the world is on screen (pure, and tested)
+    sprites.js     # source art turned into ready-to-draw images
+    pitch.js       # draws the pitch
+    player.js      # draws the players
+    ball.js        # draws the ball
+    hud.js         # times the loop and draws the debug overlay over the pitch
+  players.png      # the 24 x 8 source sheet: down, right, up
+  demo/            # playable pages for judging the game by eye
+```
 
 ## 13. Out of Scope (v1)
 - Aftertouch / ball spin (incl. rolling-dot ball animation).

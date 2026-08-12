@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { spriteFrame } from "../web/view/frames.js";
+import { spriteFrame } from "../web/view/player.js";
 
 function heading(degrees) {
   return {

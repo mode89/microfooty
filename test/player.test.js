@@ -7,7 +7,7 @@ import {
   directionFromInput,
   setHeadingAndSpeed,
   velocityOf,
-} from "../web/world/player.js";
+} from "../web/player.js";
 import { runAt } from "./helpers.js";
 
 const TICK = 1 / 60;

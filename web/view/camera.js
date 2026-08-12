@@ -1,6 +1,6 @@
-import { add, clamp, clampLength, scale, subtract } from "../math/vec.js";
+import { add, clamp, clampLength, scale, subtract } from "../math.js";
 import { CAMERA } from "../tuning.js";
-import { PITCH_BOUNDS } from "../world/pitch.js";
+import { PITCH_BOUNDS } from "../pitch.js";
 
 export function createCamera(centre = { x: 0, y: 0 }) {
   return { centre };

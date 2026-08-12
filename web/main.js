@@ -1,16 +1,11 @@
 import { startLoop } from "./loop.js";
 import { createInput } from "./input.js";
-import { createMatch, selectedPlayer } from "./world/match.js";
-import { allKits } from "./world/team.js";
-import { createDebugOverlay } from "./view/debug.js";
+import { createMatch, selectedPlayer } from "./match.js";
+import { allKits } from "./team.js";
+import { createDebugOverlay } from "./view/hud.js";
 import { fitCanvasToWindow } from "./view/canvas.js";
-import {
-  advancePresentation,
-  createPresentation,
-  drawPresentation,
-} from "./view/presentation.js";
-import { createBallSprite } from "./view/sprites.js";
-import { loadKitSprites } from "./view/kits.js";
+import { advanceScene, createScene, drawScene } from "./view/scene.js";
+import { createBallSprite, loadKitSprites } from "./view/sprites.js";
 
 const canvas = document.getElementById("screen");
 const context = canvas.getContext("2d");
@@ -30,7 +25,7 @@ fitToWindow();
 const kitSprites = await loadKitSprites("players.png", allKits());
 const debug = createDebugOverlay();
 
-let presentation = createPresentation({
+let scene = createScene({
   match: createMatch(),
   ballSprite: createBallSprite(),
   kitSprites,
@@ -43,19 +38,14 @@ function tick(seconds) {
   if (actions.debug && !debugWasHeld) debugVisible = !debugVisible;
   debugWasHeld = actions.debug;
 
-  presentation = advancePresentation(
-    presentation,
-    screenSize(),
-    actions,
-    seconds,
-  );
+  scene = advanceScene(scene, screenSize(), actions, seconds);
   debug.recordTick();
 }
 
 function render(alpha, wallClockSeconds) {
-  const { match } = presentation;
+  const { match } = scene;
   debug.recordFrame(wallClockSeconds);
-  drawPresentation(context, screenSize(), presentation, alpha);
+  drawScene(context, screenSize(), scene, alpha);
 
   if (debugVisible)
     debug.draw(context, { ball: match.ball, player: selectedPlayer(match) });

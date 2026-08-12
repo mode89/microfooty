@@ -4,13 +4,15 @@ import {
   createView,
   followCamera,
 } from "./camera.js";
-import { renderBall, renderPitch, renderPlayer } from "./render.js";
-import { advanceMatch } from "../world/match.js";
-import { kitOf } from "../world/team.js";
+import { renderBall } from "./ball.js";
+import { renderPitch } from "./pitch.js";
+import { renderPlayer } from "./player.js";
+import { advanceMatch } from "../match.js";
+import { kitOf } from "../team.js";
 
 // One match and one camera, each kept with the state it held a tick ago so a
 // frame can be drawn between the two.
-export function createPresentation({
+export function createScene({
   match,
   camera = createCamera(),
   ballSprite,
@@ -26,27 +28,27 @@ export function createPresentation({
   };
 }
 
-export function advancePresentation(presentation, screen, actions, seconds) {
-  const match = advanceMatch(presentation.match, actions, seconds);
+export function advanceScene(scene, screen, actions, seconds) {
+  const match = advanceMatch(scene.match, actions, seconds);
   // The vector helpers read x and y only, so the ball's height never moves the
   // camera.
-  const followed = followCamera(presentation.camera, match.ball, seconds);
+  const followed = followCamera(scene.camera, match.ball, seconds);
   return {
-    ...presentation,
+    ...scene,
     match,
-    previousMatch: presentation.match,
+    previousMatch: scene.match,
     camera: clampCamera(followed, viewOf(screen, followed.centre)),
-    previousCamera: presentation.camera,
+    previousCamera: scene.camera,
   };
 }
 
-export function drawPresentation(context, screen, presentation, alpha) {
-  const { match, previousMatch, ballSprite } = presentation;
+export function drawScene(context, screen, scene, alpha) {
+  const { match, previousMatch, ballSprite } = scene;
   const view = viewOf(
     screen,
     interpolatePosition(
-      presentation.previousCamera.centre,
-      presentation.camera.centre,
+      scene.previousCamera.centre,
+      scene.camera.centre,
       alpha,
     ),
   );
@@ -66,7 +68,7 @@ export function drawPresentation(context, screen, presentation, alpha) {
     },
     ballSprite,
   );
-  drawnPlayers(presentation, alpha).forEach((player) =>
+  drawnPlayers(scene, alpha).forEach((player) =>
     renderPlayer(context, view, player, player.sprites),
   );
 }

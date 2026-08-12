@@ -1,3 +1,6 @@
+// Source art turned into ready-to-draw images: the sheet is cut into frames,
+// scaled up, and baked into one offscreen canvas set per kit at load, so a kit
+// costs nothing to draw.
 export const SPRITE_SCALE = 8;
 export const SHEET_FRAMES = Object.freeze(["down", "right", "up"]);
 
@@ -146,4 +149,47 @@ function createCanvas(width, height) {
   canvas.width = width;
   canvas.height = height;
   return { canvas, context: canvas.getContext("2d") };
+}
+
+// The two colours the source art stripes the shirt in.
+const SOURCE_COLOURS = Object.freeze({
+  shirt: Object.freeze({ red: 0, green: 112, blue: 255 }),
+  stripe: Object.freeze({ red: 255, green: 255, blue: 255 }),
+});
+
+export async function loadKitSprites(url, kits, scale = SPRITE_SCALE) {
+  const sheet = await loadPlayerSheet(url);
+  return Object.freeze(
+    Object.fromEntries(
+      kits.map((kit) => [
+        kit.name,
+        cutPlayerSprites(sheet, scale, (pixels) => paintKit(pixels, kit)),
+      ]),
+    ),
+  );
+}
+
+export function paintKit(pixels, kit, source = SOURCE_COLOURS) {
+  const painted = new Uint8ClampedArray(pixels);
+  for (let byte = 0; byte < painted.length; byte += 4) {
+    if (isColour(painted, byte, source.shirt))
+      paintPixel(painted, byte, kit.shirt);
+    else if (isColour(painted, byte, source.stripe))
+      paintPixel(painted, byte, kit.stripe);
+  }
+  return painted;
+}
+
+function isColour(pixels, byte, colour) {
+  return (
+    pixels[byte] === colour.red &&
+    pixels[byte + 1] === colour.green &&
+    pixels[byte + 2] === colour.blue
+  );
+}
+
+function paintPixel(pixels, byte, colour) {
+  pixels[byte] = colour.red;
+  pixels[byte + 1] = colour.green;
+  pixels[byte + 2] = colour.blue;
 }

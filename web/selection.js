@@ -1,8 +1,8 @@
 // Control follows the ball rather than sticking to one shirt: a touch, a freeze
 // while our own team was the last to touch, the soonest meeting, and the
 // keyboard's own grip on whoever it was last handed.
-import { SELECTION } from "../tuning.js";
-import { interception, soonerThan, soonestToMeet } from "./interception.js";
+import { SELECTION } from "./tuning.js";
+import { interception, soonerThan, soonestToMeet } from "./player.js";
 
 export function selectPlayer(
   { players, selectedIndex, recentToucherIndex, lastTouchTeam },

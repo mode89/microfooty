@@ -4,7 +4,7 @@ _Reference context — observed facts and standing conventions for this project,
 
 - `SPEC.md` states every rule: gameplay, mechanics, presentation and the technical ground rules. `ROADMAP.md` holds only the plan.
 - `ROADMAP.md` steps are named `M1.N` and `M2.N`, each one a goal line plus a `*Review:*` line and a `*Tests:*` line.
-- Neither `SPEC.md` nor `ROADMAP.md` carries a file layout: the tree is read from `web/` itself.
+- `SPEC.md` §12 carries the target file layout, one line of description a file, and the code is kept to it. `ROADMAP.md` still holds only the plan.
 - `package.json` sets `"type": "module"`, so `node --test` loads the `web/` ES modules unchanged. Its dev dependencies are lint and format tools only; `web/` still runs from source with no build step.
 
 ## Conventions
@@ -52,7 +52,7 @@ _Reference context — observed facts and standing conventions for this project,
 - Prettier owns style; `eslint-config-prettier` disables ESLint style rules. Why: the tools disagreed, and Prettier wraps long lines that `@stylistic/eslint-plugin` could not.
 - Prettier ignores `*.md`. Why: reformatting the SPEC.md prose changed 48 lines and would bury real edits in review.
 - The camera follows the ball, not the player. Why: the M1 acceptance in `ROADMAP.md` asks for it. Cost: a resting ball holds the camera still, so the player can run out of the roughly 61 × 34 m view.
-- Presentation owns match and camera snapshots, match advance, interpolation, and draw order. Why: duplicating this temporal policy in two pages left composition mistakes outside the test surface.
+- `web/view/scene.js` owns match and camera snapshots, match advance, interpolation, and draw order. Why: duplicating this temporal policy in two pages left composition mistakes outside the test surface.
 - The ball is drawn at twice its real 0.11 m radius, and neither the ball nor its shadow changes size with height. Why: at the 90% zoom the true size is a 3 px dot, and a fixed size leaves the ball-to-shadow gap as the single height cue.
 - M1.3 draws the ball as a plain circle and M1.4 introduces sprites. Why: separates "is the physics right" from "does the art pipeline work", so a failed review has one obvious cause.
 - M1 uses the real sprites rather than placeholder shapes. Why: validates the continuous-presentation look early instead of deferring the risk to M4.
@@ -64,15 +64,17 @@ _Reference context — observed facts and standing conventions for this project,
 - A new toucher calculates its first touch at full pace, then moves at carrying pace. Why: this preserves the accepted dribble lead; carrying pace would shorten the touch.
 - A player's run is a unit `heading` plus a scalar `speed`, and `velocityOf` rebuilds the vector for the rules that want one. Why: the heading outlives the run, so a player who has stopped still points where they last ran.
 - A kick goes along the player's heading, with no aim state of its own. Why: the heading already persists when stopped, and the aim it replaced was seeded up the pitch, so a player who kicked before ever moving shot at their own goal.
-- Sprite frames depend only on heading in `web/view/frames.js`. Why: the old flicker dead band required prior frame state, which the world no longer stores.
+- Sprite frames depend only on heading, in `spriteFrame` of `web/view/player.js`. Why: the old flicker dead band required prior frame state, which the world no longer stores.
 - Presentation receives a kit sprite catalogue and selects by team and role. Why: this is the sole kit rule, so an injected selector added speculative flexibility.
 - Running onto your own tap counts as dribbling, so the weakest kick is not required to outrun the kicker. Why: the alternative was raising `KICK.minimumPower` from 9 to 11, which lengthens every short pass. The test was changed instead.
 - `KICK.maximumPower` in `web/tuning.js` is 28 m/s, which carries 83 m of the 105 m pitch. Why: picked over 24 m/s (63 m), which leaves less than "most of the pitch" as M1.7 of `ROADMAP.md` asks, and 32 m/s (104 m).
 - Every team's `roles` aliases the single `FORMATION_442`, and the field stays despite the duplication. Why: `SPEC.md` §7 makes the formation part of team data, and M2.3 gives roles a ball-shifted home.
-- `web/world/` does not import `web/input.js`: the key-held check in `selection.js` destructures the action names instead. Why: the world would otherwise depend on the input adapter for one list of names.
+- No simulation module imports `web/input.js`: the key-held check in `web/selection.js` destructures the action names instead. Why: the simulation would otherwise depend on the input adapter for one list of names.
 - `web/tuning.js` does not import `TICK_SECONDS` from `web/loop.js`, so `INTERCEPTION.stepSeconds` retypes 1/60. Why: tuning depending on the frame loop is the wrong direction. Cost: its comment can only claim the two agree, not guarantee it.
-- Marker and sprite styling stays in `web/view/render.js` rather than `web/tuning.js`. Why: tuning holds feel, not paint.
-- The body push lives in `web/world/bodies.js` as `partBodies`, not under `ai/`. Why: it moves bodies rather than deciding anything, so it belongs with the other world rules.
+- Marker and sprite styling stays in the `web/view/` drawing modules rather than `web/tuning.js`. Why: tuning holds feel, not paint.
+- The body push lives in `web/player.js` as `partBodies`, not under `ai/`. Why: it moves bodies rather than deciding anything, so it belongs with the other player rules.
+- The ball path walk `predictBallPath` lives in `web/ball.js`, and the ranking over it, `interception` and `soonestToMeet`, in `web/player.js`. Why: the walk is the ball's own rules; who reaches a point in time is a player's.
+- `web/view/camera.js` is pure and tested although it sits under `view/`. Why: it is world-to-screen maths, and its neighbours are where a reader looks for it.
 
 ## Dead Ends
 

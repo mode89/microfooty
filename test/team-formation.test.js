@@ -1,11 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { FORMATION_442, homePosition } from "../web/world/formation.js";
-import {
-  DOWN_THE_PITCH,
-  PITCH_BOUNDS,
-  UP_THE_PITCH,
-} from "../web/world/pitch.js";
+import { FORMATION_442, homePosition } from "../web/team.js";
+import { DOWN_THE_PITCH, PITCH_BOUNDS, UP_THE_PITCH } from "../web/pitch.js";
 import { SHAPE } from "../web/tuning.js";
 
 const CENTRE_SPOT = Object.freeze({ x: 0, y: 0 });

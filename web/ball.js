@@ -1,4 +1,4 @@
-import { BALL } from "../tuning.js";
+import { BALL, INTERCEPTION } from "./tuning.js";
 
 const EPSILON = 1e-9;
 
@@ -41,6 +41,25 @@ export function advanceBall(ball, seconds, settings = BALL) {
   }
 
   return current;
+}
+
+// Where the ball will be, walked with the ball's own rules, so bounce, drag and
+// rolling friction need no second model anywhere else. One path serves every
+// player in a tick: the ball's future does not depend on who is chasing it.
+export function predictBallPath(ball, settings = INTERCEPTION) {
+  // Floored, so a step that does not divide the horizon stops just inside it
+  // rather than just past it.
+  const steps = Math.floor(settings.horizonSeconds / settings.stepSeconds);
+  const ballPath = [{ position: ball.position, seconds: 0 }];
+  let rolling = ball;
+  for (let step = 1; step <= steps; step += 1) {
+    rolling = advanceBall(rolling, settings.stepSeconds);
+    ballPath.push({
+      position: rolling.position,
+      seconds: step * settings.stepSeconds,
+    });
+  }
+  return ballPath;
 }
 
 function isGrounded(ball, settings) {

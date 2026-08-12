@@ -1,9 +1,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { BALL, DRIBBLE, KICK, PLAYER, PLAYER_CARRYING } from "../web/tuning.js";
-import { createBall } from "../web/world/ball.js";
-import { advancePossession, createControl } from "../web/world/possession.js";
-import { createPlayer } from "../web/world/player.js";
+import { createBall } from "../web/ball.js";
+import {
+  advancePossession,
+  createControl,
+  createPlayer,
+} from "../web/player.js";
 
 const TICK = 1 / 60;
 const STILL = Object.freeze({ x: 0, y: 0 });

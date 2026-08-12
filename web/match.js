@@ -1,14 +1,17 @@
 // The whole match in one state: twenty-two players, one loose ball, the team of
 // the last touch, and the selection the keyboard follows.
-import { runDirections } from "../ai/roles.js";
-import { predictBallPath } from "./interception.js";
+import { runDirections } from "./ai/off-ball.js";
+import { advanceBall, createBall, predictBallPath } from "./ball.js";
 import { nextKeyboardGrip, selectPlayer } from "./selection.js";
-import { advanceBall, createBall } from "./ball.js";
-import { partBodies } from "./bodies.js";
-import { homePosition } from "./formation.js";
-import { advancePossession, createControl } from "./possession.js";
-import { advancePlayer, createPlayer, directionFromInput } from "./player.js";
-import { TEAMS } from "./team.js";
+import {
+  advancePlayer,
+  advancePossession,
+  createControl,
+  createPlayer,
+  directionFromInput,
+  partBodies,
+} from "./player.js";
+import { TEAMS, homePosition } from "./team.js";
 
 const FIRST_SELECTED_ROLE = "rightStriker";
 const STILL = Object.freeze({ x: 0, y: 0 });

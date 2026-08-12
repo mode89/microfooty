@@ -1,7 +1,7 @@
 // The pitch is vertical: +y runs down the screen along its length, towards the
 // bottom goal, and +x runs across its width. The origin is the centre spot.
 // All lengths are metres and follow the standard full-size pitch.
-import { clamp } from "../math/vec.js";
+import { clamp } from "./math.js";
 
 export const PITCH = Object.freeze({
   length: 105,

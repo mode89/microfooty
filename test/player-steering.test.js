@@ -1,11 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { directionToward } from "../web/ai/steering.js";
 import {
   advancePlayer,
   createPlayer,
+  directionToward,
   setHeadingAndSpeed,
-} from "../web/world/player.js";
+} from "../web/player.js";
 import { STEERING } from "../web/tuning.js";
 
 const TICK = 1 / 60;

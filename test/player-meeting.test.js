@@ -1,11 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {
-  predictBallPath,
-  interception,
-  soonerThan,
-} from "../web/world/interception.js";
-import { advanceBall } from "../web/world/ball.js";
+import { interception, soonerThan } from "../web/player.js";
+import { advanceBall, predictBallPath } from "../web/ball.js";
 import { BALL, DRIBBLE, INTERCEPTION, KICK, PLAYER } from "../web/tuning.js";
 import { ballAt, playerAt } from "./helpers.js";
 
