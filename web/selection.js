@@ -4,14 +4,16 @@
 import { SELECTION } from "./tuning.js";
 import { interception, soonerThan, soonestToMeet } from "./player.js";
 
+// One rule covers the keeper across every branch below: he is handed the
+// keyboard only once he has touched the ball, since only the driven player can
+// kick, and never for being the soonest to reach it.
 export function selectPlayer(
   { players, selectedIndex, recentToucherIndex, lastTouchTeam },
   ballPath,
 ) {
   const ourTeam = players[selectedIndex].team;
   // A touch outranks the freeze: the freeze leaves a pass in the kicker's
-  // hands, and a teammate on the ball has ended that pass already. The keeper
-  // is included, since only the driven player can kick.
+  // hands, and a teammate on the ball has ended that pass already.
   if (
     recentToucherIndex !== null &&
     players[recentToucherIndex].team === ourTeam
@@ -36,8 +38,8 @@ export function nextKeyboardGrip(
 
 function soonestTeammate(players, ballPath, selectedIndex) {
   const selected = players[selectedIndex];
-  // The keeper is left out here alone: `runDirections` still ranks him in as a
-  // chaser, so he leaves his goal for his own touch and never for the keyboard.
+  // The keeper is left out by the rule above, while `runDirections` still ranks
+  // him in as a chaser, so he leaves his goal for his own touch alone.
   const rival = soonestToMeet(
     players,
     ballPath,

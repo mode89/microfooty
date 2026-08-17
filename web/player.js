@@ -158,44 +158,67 @@ export function advancePossession(
     ...player,
     control: countDownTimers(player.control, seconds),
   }));
-  const playersReadyToTouch = setPlayerHeadingsAndSpeeds(
-    cooled,
-    directions,
-    previousToucherIndex,
+  // A player is only slowed while he is the carrier, and who the carrier is
+  // changes in the middle of this step. Only the carrier of the previous step
+  // is slowed on the way in, so a player who wins the ball here plays his
+  // first touch at his full running pace.
+  const arriving = pacedByCarrier(cooled, directions, previousToucherIndex);
+  const played = playBall(
+    { players: arriving, ball, kickCharge },
+    {
+      directions,
+      earlyToucherIndex,
+      previousToucherIndex,
+      kickingPlayerIndex,
+      kickHeld,
+    },
+    seconds,
   );
+  const carrierIndex = played.didKick ? null : activeRecentToucher(played);
+
+  return {
+    // The carry that the touch just started is what the slower pace is for, so
+    // it lands here, after the ball has been played.
+    players: pacedByCarrier(played.players, directions, carrierIndex),
+    ball: played.ball,
+    recentToucherIndex: carrierIndex,
+    kickCharge: played.kickCharge,
+    didKick: played.didKick,
+  };
+}
+
+function playBall(
+  { players, ball, kickCharge },
+  {
+    directions,
+    earlyToucherIndex,
+    previousToucherIndex,
+    kickingPlayerIndex,
+    kickHeld,
+  },
+  seconds,
+) {
   const touched = playTouch(
-    playersReadyToTouch,
+    players,
     ball,
     directions,
     earlyToucherIndex,
     previousToucherIndex,
   );
-  const kicked = playKick(
+  return playKick(
     { ...touched, kickCharge },
     { kickingPlayerIndex, kickHeld },
     seconds,
   );
-  const finalToucherIndex = kicked.didKick ? null : activeRecentToucher(kicked);
-
-  return {
-    players: setPlayerHeadingsAndSpeeds(
-      kicked.players,
-      directions,
-      finalToucherIndex,
-    ),
-    ball: kicked.ball,
-    recentToucherIndex: finalToucherIndex,
-    kickCharge: kicked.kickCharge,
-    didKick: kicked.didKick,
-  };
 }
 
-function setPlayerHeadingsAndSpeeds(players, directions, recentToucherIndex) {
+// The carrier runs at the slower carrying pace; everyone else runs free.
+function pacedByCarrier(players, directions, carrierIndex) {
   return players.map((player, index) =>
     setHeadingAndSpeed(
       player,
       directions[index],
-      index === recentToucherIndex ? PLAYER_CARRYING : PLAYER,
+      index === carrierIndex ? PLAYER_CARRYING : PLAYER,
     ),
   );
 }

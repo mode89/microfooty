@@ -19,6 +19,7 @@ _Reference context — observed facts and standing conventions for this project,
 - Camera settling tests derive their tick count from tuning, e.g. 10 × `CAMERA.smoothingSeconds`. Why: 600 fixed ticks once missed a 0.01 m tolerance.
 - A test fixture that must fall inside a tuning limit is derived from that constant, not written as a literal. Why: a hand-picked ball "inside every band" made the follow-share test fail when the keeper's rein shrank, blaming the wrong rule.
 - Tests that read feel constants are checked against plausible retunes of them, not only against deleted rules. Why: the deleted-rule set passed while a keeper rein cut from 3 m to 1.5 m falsely failed a test of the follow share.
+- A comprehension prompt is read for a second true meaning before the code is blamed for its failure. Why: two tests failed about one run in five on prompts that left out who the keyboard was driving. How to apply: on any unstable failure.
 - The whole mutation set is re-run after a refactor of the code its tests cover. Why: the M2.2 refactor renamed a module and changed a helper's signature, and the re-run proved every rule still had a test that fails without it.
 - Scratch copies for mutation runs live outside the repo, e.g. `cp -r web test package.json /tmp/mut/`. Why: `node --test` collects any `*.test.js` in the tree, so probes and copies kept inside the repo are loaded as tests.
 - Mutation suites that create and edit scratch copies under `/tmp` are safe to run without confirmation. Why: they cannot change the working tree. How to apply: keep every mutation copy outside the repository.
@@ -39,7 +40,7 @@ _Reference context — observed facts and standing conventions for this project,
 - 22 bodies stacked on one point are still 0.996 m apart after 4000 ticks, and the first tick throws the outermost one 1.4 m, because the pushes of 21 neighbours sum uncapped.
 - The closest pair of formation home positions is 8.4 m apart, so nobody is pushed apart at kick-off.
 - A steering target on or outside the touchline settles still rather than shivering: `advancePlayer` zeroes the velocity on the blocked axis, so the player pins to the line.
-- A dribbler can walk the ball over a line and leave it untouchable for good: `partBodies` clamps players inside the pitch while the ball is not clamped, so it rests about 2 m out against a 1 m `DRIBBLE.controlRadius`.
+- A ball dribbled over a line rests about 2 m out and is untouchable for good, against a 1 m `DRIBBLE.controlRadius`.
 - Every frame of `web/players.png` leaves row 0 and row 7 blank, so the body fills six of the eight rows and looks smaller than its 1.4 m draw width suggests.
 - The background of `web/players.png` is solid magenta `(255, 0, 255)`, which is the transparency key rather than a drawn colour.
 - `node --test` also runs every `.js` file under a `test/` directory, so `test/helpers.js` is reported as a test file with no tests. The `npm test` script passes `test/*.test.js` to keep the run to the specs.
@@ -61,7 +62,7 @@ _Reference context — observed facts and standing conventions for this project,
 - A player's position is the point where the feet stand, as the ball's position is its point on the ground. Why: one ground-level meaning for both keeps player-to-ball distance honest for dribbling and tackling.
 - A low fast ball is controlled by replacing its horizontal velocity. Why: the user accepted the arcade interception behavior; no velocity-change cap is wanted.
 - Possession is one deep in-process module with no adapter. Why: one implementation makes another seam hypothetical, while one module keeps touch and kick order local.
-- A new toucher calculates its first touch at full pace, then moves at carrying pace. Why: this preserves the accepted dribble lead; carrying pace would shorten the touch.
+- A first touch is worked out at full pace because carrying pace would shorten the accepted dribble lead: the lead is a pace times the touch period.
 - A player's run is a unit `heading` plus a scalar `speed`, and `velocityOf` rebuilds the vector for the rules that want one. Why: the heading outlives the run, so a player who has stopped still points where they last ran.
 - A kick goes along the player's heading, with no aim state of its own. Why: the heading already persists when stopped, and the aim it replaced was seeded up the pitch, so a player who kicked before ever moving shot at their own goal.
 - Sprite frames depend only on heading, in `spriteFrame` of `web/view/player.js`. Why: the old flicker dead band required prior frame state, which the world no longer stores.
@@ -97,6 +98,5 @@ _Reference context — observed facts and standing conventions for this project,
 
 This glossary records project terms whose local meaning is easy to mistake. Entries change when the shared domain language changes.
 
-- **Possession**: Loose-ball play handled by the Possession module. It is not stored ownership; the ball stays loose, and possession emerges from touches.
 - **Selection**: Which single player the keyboard drives. It moves on its own as play moves, and is not a claim on the ball.
 - **Grip**: Whether the human has actually taken over the selected player. Without it the selected player chases the ball on its own.

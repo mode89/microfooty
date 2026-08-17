@@ -56,15 +56,16 @@ export function advanceMatch(match, actions, seconds) {
       ? { index: selectedIndex, direction: keyboardDirection }
       : null,
   });
+  // The one bypass of the dribble pacing: the driven player, on the step he
+  // turns, so a turn is taken at once rather than at the next paced touch.
+  const driverTurned =
+    keyboardEngaged &&
+    directionChanged(match.keyboardDirection, keyboardDirection);
   const possession = advancePossession(
     possessionStateOf(match, kickingPlayerIndex),
     {
       directions,
-      earlyToucherIndex:
-        keyboardEngaged &&
-        directionChanged(match.keyboardDirection, keyboardDirection)
-          ? selectedIndex
-          : null,
+      earlyToucherIndex: driverTurned ? selectedIndex : null,
       kickingPlayerIndex,
       kickHeld: actions.kick,
     },
